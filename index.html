@@ -706,8 +706,9 @@ function spawnCoins(){
       do{cx=rm.x0+2+Math.random()*(rm.x1-rm.x0-4);cz=rm.z0+2+Math.random()*(rm.z1-rm.z0-4);tries++;}
       while(tries<30&&coins.some(c=>Math.hypot(c.x-cx,c.z-cz)<1.8));
       const cg=new THREE.Group();
-      cg.add(Object.assign(new THREE.Mesh(new THREE.TorusGeometry(.3,.09,6,14),lm(0xFFD700)),
-        {rotation:{x:Math.PI/2,y:0,z:0}}));
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(.3,.09,6,14),lm(0xFFD700));
+      ring.rotation.x=Math.PI/2;
+      cg.add(ring);
       cg.position.set(cx,.9,cz);
       cg.userData.ph=Math.random()*Math.PI*2;
       scene.add(cg);
@@ -781,23 +782,23 @@ function mkChar(cfg){
       new THREE.MeshLambertMaterial({map:mkNumTex(jerseyNum),transparent:true}));
     nm.position.set(0,1.8,.34);g.add(nm);
   }
-  // Arms
+  // Arms — use .position.set() not Object.assign (Three.js Vector3 can't be plain-object-assigned)
   const aL=new THREE.Group();aL.position.set(-.85,2.2,0);
-  aL.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.42,1,.42),lm(shirt)),{position:{x:0,y:-.5,z:0}}));
-  aL.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.38,.9,.38),lm(skin)),{position:{x:0,y:-1.38,z:0}}));
+  const aLu=new THREE.Mesh(new THREE.BoxGeometry(.42,1,.42),lm(shirt));aLu.position.set(0,-.5,0);aL.add(aLu);
+  const aLl=new THREE.Mesh(new THREE.BoxGeometry(.38,.9,.38),lm(skin));aLl.position.set(0,-1.38,0);aL.add(aLl);
   g.add(aL);
   const aR=new THREE.Group();aR.position.set(.85,2.2,0);
-  aR.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.42,1,.42),lm(shirt)),{position:{x:0,y:-.5,z:0}}));
-  aR.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.38,.9,.38),lm(skin)),{position:{x:0,y:-1.38,z:0}}));
+  const aRu=new THREE.Mesh(new THREE.BoxGeometry(.42,1,.42),lm(shirt));aRu.position.set(0,-.5,0);aR.add(aRu);
+  const aRl=new THREE.Mesh(new THREE.BoxGeometry(.38,.9,.38),lm(skin));aRl.position.set(0,-1.38,0);aR.add(aRl);
   g.add(aR);
   // Legs
   const lL=new THREE.Group();lL.position.set(-.33,1.1,0);
-  lL.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.44,1,.44),lm(pants)),{position:{x:0,y:-.5,z:0}}));
-  lL.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.4,.9,.4),lm(0x1A1A1A)),{position:{x:0,y:-1.38,z:0}}));
+  const lLu=new THREE.Mesh(new THREE.BoxGeometry(.44,1,.44),lm(pants));lLu.position.set(0,-.5,0);lL.add(lLu);
+  const lLl=new THREE.Mesh(new THREE.BoxGeometry(.4,.9,.4),lm(0x1A1A1A));lLl.position.set(0,-1.38,0);lL.add(lLl);
   g.add(lL);
   const lR=new THREE.Group();lR.position.set(.33,1.1,0);
-  lR.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.44,1,.44),lm(pants)),{position:{x:0,y:-.5,z:0}}));
-  lR.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.4,.9,.4),lm(0x1A1A1A)),{position:{x:0,y:-1.38,z:0}}));
+  const lRu=new THREE.Mesh(new THREE.BoxGeometry(.44,1,.44),lm(pants));lRu.position.set(0,-.5,0);lR.add(lRu);
+  const lRl=new THREE.Mesh(new THREE.BoxGeometry(.4,.9,.4),lm(0x1A1A1A));lRl.position.set(0,-1.38,0);lR.add(lRl);
   g.add(lR);
   // Name tag
   if(name){
