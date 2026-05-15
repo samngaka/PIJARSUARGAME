@@ -972,8 +972,8 @@ function updatePlayer(){
   if(keys['d']||keys['D']){dx+=Math.cos(yaw)*spd*.7;dz-=Math.sin(yaw)*spd*.7;}
   // Joystick
   if(jActive){
-    dx+=(Math.sin(yaw)*jDy-Math.cos(yaw)*jDx)*spd;
-    dz+=(Math.cos(yaw)*jDy+Math.sin(yaw)*jDx)*spd;
+    dx+=(Math.sin(yaw)*jDy+Math.cos(yaw)*jDx)*spd;
+    dz+=(Math.cos(yaw)*jDy-Math.sin(yaw)*jDx)*spd;
   }
   const moving=Math.abs(dx)>.0005||Math.abs(dz)>.0005;
   const nx=playerPos.x+dx,nz=playerPos.z+dz;
@@ -1570,8 +1570,8 @@ renderer.domElement.addEventListener('mousedown',e=>{mDrag=true;mLX=e.clientX;})
 window.addEventListener('mouseup',()=>mDrag=false);
 window.addEventListener('mousemove',e=>{
   if(!mDrag)return;
-  if(gState==='PLAYING'){yaw-=(e.clientX-mLX)*.005;}
-  if(gState==='PSCENE'&&psCut&&psCut.phase==='mother'){yaw-=(e.clientX-mLX)*.005;}
+  if(gState==='PLAYING'){yaw+=(e.clientX-mLX)*.005;}
+  if(gState==='PSCENE'&&psCut&&psCut.phase==='mother'){yaw+=(e.clientX-mLX)*.005;}
   mLX=e.clientX;
 });
 
@@ -1614,8 +1614,8 @@ function handleTMove(e){
       jthumb.style.transform=`translate(calc(-50% + ${jDx*JMR}px),calc(-50% + ${jDy*JMR}px))`;
     }
     if(t.identifier===cTId&&(gState==='PLAYING'||gState==='PSCENE')){
-      if(gState==='PLAYING')yaw-=(t.clientX-cLX)*.007;
-      if(gState==='PSCENE'&&psCut&&psCut.phase==='mother')yaw-=(t.clientX-cLX)*.007;
+      if(gState==='PLAYING')yaw+=(t.clientX-cLX)*.007;
+      if(gState==='PSCENE'&&psCut&&psCut.phase==='mother')yaw+=(t.clientX-cLX)*.007;
       cLX=t.clientX;
     }
   }
