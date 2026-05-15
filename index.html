@@ -2,519 +2,464 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<!-- iOS-specific: exact viewport, no zoom, no bounce -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Suar & Pijar">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0d1a0d">
-<title>Petualangan Suar & Pijar</title>
+<title>🏠 Suar & Pijar</title>
 <style>
-/* ============ RESET & BASE ============ */
+/* ===== RESET ===== */
 *{margin:0;padding:0;box-sizing:border-box;
   -webkit-tap-highlight-color:transparent;
   -webkit-touch-callout:none;
   -webkit-user-select:none;user-select:none;}
-
-html{
-  width:100%;height:100%;
-  /* Prevent iOS rubber-band scroll */
-  overflow:hidden;
-  overscroll-behavior:none;
-}
-body{
+html,body{
   width:100%;height:100%;
   overflow:hidden;
   overscroll-behavior:none;
-  background:#0d1a0d;
-  /* iOS safe area support */
-  padding-top:env(safe-area-inset-top);
-  padding-bottom:env(safe-area-inset-bottom);
-  padding-left:env(safe-area-inset-left);
-  padding-right:env(safe-area-inset-right);
+  background:#1a2a1a;
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;
 }
 
-/* Canvas fills viewport EXACTLY — Three.js controls size via JS */
+/* Three.js canvas */
 #gc{
-  position:fixed;
-  top:0;left:0;
-  width:100vw;height:100vh;
   display:block;
+  position:fixed;top:0;left:0;
+  width:100%;height:100%;
   touch-action:none;
 }
 
-/* ============ PORTRAIT GATE ============ */
-#portrait-gate{
-  display:none;
-  position:fixed;inset:0;z-index:9999;
-  background:#0d1a0d;
-  flex-direction:column;align-items:center;justify-content:center;
-  color:#fff;text-align:center;padding:32px;
-}
-#portrait-gate .pg-icon{font-size:64px;margin-bottom:20px;
-  animation:rock 1.5s ease-in-out infinite;}
-@keyframes rock{0%,100%{transform:rotate(-15deg);}50%{transform:rotate(15deg);}}
-#portrait-gate h2{color:#FFD700;font-size:22px;margin-bottom:10px;}
-#portrait-gate p{color:#aaa;font-size:15px;line-height:1.6;}
-
-/* Show portrait gate on portrait phones */
-@media (orientation:portrait) and (max-width:1024px){
-  #portrait-gate{display:flex;}
-  #game-wrap{display:none!important;}
-}
-
-/* ============ GAME WRAP ============ */
-#game-wrap{position:fixed;inset:0;display:block;}
-
-/* ============ HUD ============ */
+/* ===== HUD ===== */
 #hud{
+  display:none;
   position:fixed;
-  top:max(10px, env(safe-area-inset-top, 10px));
-  left:max(12px, env(safe-area-inset-left, 12px));
-  right:max(12px, env(safe-area-inset-right, 12px));
-  display:none;flex-wrap:wrap;gap:6px;
-  pointer-events:none;z-index:60;
+  top:max(8px,env(safe-area-inset-top));
+  left:max(10px,env(safe-area-inset-left));
+  right:max(10px,env(safe-area-inset-right));
+  flex-wrap:wrap;gap:5px;
+  z-index:60;pointer-events:none;
 }
 .pill{
-  background:rgba(0,0,0,.7);color:#fff;
-  padding:5px 12px;border-radius:20px;
-  font-size:13px;font-weight:700;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  background:rgba(0,0,0,.72);color:#fff;
+  padding:5px 11px;border-radius:18px;
+  font-size:12px;font-weight:700;
+  -webkit-backdrop-filter:blur(6px);
+  backdrop-filter:blur(6px);
 }
 
-/* ============ DOOR HINT ============ */
-#door-hint{
+/* ===== DOOR HINT ===== */
+#dhint{
+  display:none;
   position:fixed;top:50%;left:50%;
   transform:translate(-50%,-50%);
-  background:rgba(255,193,7,.92);color:#000;
-  border-radius:14px;padding:10px 22px;
-  font-size:13px;font-weight:700;
-  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-  z-index:65;display:none;pointer-events:none;
-  white-space:nowrap;
+  background:rgba(255,193,7,.93);color:#000;
+  border-radius:12px;padding:8px 18px;
+  font-size:12px;font-weight:700;
+  z-index:62;pointer-events:none;
+  white-space:nowrap;text-align:center;
 }
 
-/* ============ NPC DIALOG ============ */
-#npc-dlg{
+/* ===== NPC DIALOG ===== */
+#ndlg{
+  display:none;
   position:fixed;
-  bottom:max(140px, calc(140px + env(safe-area-inset-bottom)));
+  /* Sits just above the control bar */
+  bottom:calc(max(150px,env(safe-area-inset-bottom)+140px));
   left:50%;transform:translateX(-50%);
-  width:min(560px, calc(100vw - 32px));
+  width:min(520px,calc(100vw - 20px));
   background:#fff;
-  border-radius:18px;
-  padding:16px 20px 14px;
-  box-shadow:0 -2px 24px rgba(0,0,0,.3);
+  border-radius:16px;
+  padding:14px 18px 12px;
+  box-shadow:0 -2px 20px rgba(0,0,0,.3);
   border:3px solid #4CAF50;
-  z-index:150;display:none;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  z-index:120;
 }
-#npc-dlg .nname{font-size:15px;font-weight:800;margin-bottom:6px;}
-#npc-dlg .ntext{font-size:13px;color:#333;line-height:1.6;margin-bottom:12px;}
-#npc-dlg .nbtn-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
-.npc-btn{
-  padding:10px 16px;border:none;border-radius:20px;
-  font-size:13px;font-weight:700;cursor:pointer;
-  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-  /* iOS: large enough touch target */
-  min-height:44px;min-width:80px;
+#ndlg .nn{font-size:14px;font-weight:800;margin-bottom:5px;}
+#ndlg .nt{font-size:13px;color:#333;line-height:1.55;margin-bottom:10px;}
+#ndlg .nb{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;}
+.nbtn{
+  padding:9px 14px;border:none;border-radius:18px;
+  font-size:12px;font-weight:700;cursor:pointer;color:#fff;
+  min-height:42px;min-width:70px;
   touch-action:manipulation;
 }
-.npc-btn:active{filter:brightness(.88);}
+.nbtn:active{filter:brightness(.85);}
 
-/* ============ OVERLAYS ============ */
+/* ===== OVERLAYS ===== */
 .ov{
+  display:none;
   position:fixed;inset:0;z-index:200;
-  display:flex;align-items:center;justify-content:center;
+  align-items:center;justify-content:center;
   background:rgba(0,0,0,.88);
-  /* Allow scroll inside panels */
   overflow-y:auto;
   -webkit-overflow-scrolling:touch;
 }
+.ov.show{display:flex;}
 .panel{
   background:linear-gradient(160deg,#1a2a1a,#0a1510);
-  border-radius:20px;
-  padding:22px 24px;
-  border:3px solid #4CAF50;
-  box-shadow:0 0 40px #4CAF5040;
-  width:min(680px, calc(100vw - 24px));
-  max-height:calc(100vh - 80px);
+  border-radius:18px;
+  padding:20px 22px;
+  border:2px solid #4CAF50;
+  box-shadow:0 0 30px #4CAF5040;
+  width:min(600px,calc(100vw - 20px));
+  max-height:calc(100vh - 40px);
   overflow-y:auto;
   -webkit-overflow-scrolling:touch;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
-.panel h1{font-size:clamp(17px,4.5vw,26px);color:#FFD700;text-align:center;margin-bottom:6px;}
-.panel h2{font-size:clamp(12px,3vw,17px);color:#A5D6A7;text-align:center;margin-bottom:14px;font-weight:400;}
-.btn-main{
-  display:block;margin:14px auto 0;
+.panel h1{font-size:clamp(16px,5vw,24px);color:#FFD700;text-align:center;margin-bottom:5px;}
+.panel h2{font-size:clamp(12px,3.5vw,16px);color:#A5D6A7;text-align:center;margin-bottom:14px;font-weight:400;}
+.bmain{
+  display:block;margin:12px auto 0;
   background:#4CAF50;color:#fff;border:none;
-  border-radius:24px;padding:14px 32px;
-  font-size:16px;font-weight:700;cursor:pointer;
-  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-  min-height:50px;touch-action:manipulation;
+  border-radius:22px;padding:12px 28px;
+  font-size:15px;font-weight:700;cursor:pointer;
+  min-height:46px;touch-action:manipulation;
 }
-.btn-main:active{filter:brightness(.9);}
+.bmain:active{filter:brightness(.9);}
 
 /* Char cards */
-.cards{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
-.char-card{
+.cards{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.ccard{
   background:rgba(255,255,255,.07);
   border:2px solid rgba(255,255,255,.15);
-  border-radius:16px;padding:18px 14px;
+  border-radius:14px;padding:16px 12px;
   text-align:center;cursor:pointer;
-  flex:1;min-width:140px;max-width:200px;
-  min-height:120px;
-  touch-action:manipulation;
+  flex:1;min-width:130px;max-width:200px;
+  min-height:100px;touch-action:manipulation;
 }
-.char-card:active{border-color:#FFD700;background:rgba(255,215,0,.12);transform:scale(.97);}
-.char-card .ce{font-size:clamp(36px,10vw,54px);display:block;margin-bottom:8px;}
-.char-card h3{color:#fff;font-size:clamp(14px,4vw,18px);}
-.char-card p{color:#aaa;font-size:clamp(11px,2.5vw,13px);margin-top:4px;}
+.ccard:active{border-color:#FFD700;background:rgba(255,215,0,.13);}
+.ccard .ce{font-size:clamp(34px,9vw,50px);display:block;margin-bottom:7px;}
+.ccard h3{color:#fff;font-size:clamp(13px,4vw,17px);}
+.ccard p{color:#aaa;font-size:clamp(10px,2.5vw,12px);margin-top:3px;}
 
 /* Questions */
-.q-progress{display:flex;gap:8px;justify-content:center;margin-bottom:12px;}
-.q-dot{
-  width:clamp(28px,7vw,34px);height:clamp(28px,7vw,34px);
+.qprog{display:flex;gap:7px;justify-content:center;margin-bottom:11px;}
+.qdot{
+  width:clamp(26px,7vw,32px);height:clamp(26px,7vw,32px);
   border-radius:50%;background:rgba(255,255,255,.1);
   border:2px solid rgba(255,255,255,.2);
   display:flex;align-items:center;justify-content:center;
-  font-size:12px;color:#fff;font-weight:700;
+  font-size:11px;color:#fff;font-weight:700;
 }
-.q-dot.done{background:rgba(76,175,80,.55);border-color:#4CAF50;}
-.q-dot.act{background:rgba(255,193,7,.35);border-color:#FFC107;}
-.q-subj{color:#80CBC4;font-size:12px;text-align:center;margin-bottom:8px;}
-.q-txt{
-  color:#fff;font-size:clamp(15px,4.5vw,22px);font-weight:700;
-  text-align:center;margin-bottom:14px;
-  padding:12px;background:rgba(255,255,255,.07);
-  border-radius:12px;line-height:1.4;
+.qdot.done{background:rgba(76,175,80,.55);border-color:#4CAF50;}
+.qdot.act{background:rgba(255,193,7,.35);border-color:#FFC107;}
+.qsubj{color:#80CBC4;font-size:11px;text-align:center;margin-bottom:7px;}
+.qtxt{
+  color:#fff;font-size:clamp(14px,4.5vw,20px);font-weight:700;
+  text-align:center;margin-bottom:12px;
+  padding:11px;background:rgba(255,255,255,.07);
+  border-radius:11px;line-height:1.4;
 }
-.q-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.q-btn{
+.qgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.qbtn{
   background:rgba(255,255,255,.09);
   border:2px solid rgba(255,255,255,.18);
-  border-radius:12px;
-  padding:clamp(11px,3vw,15px) 10px;
-  color:#fff;font-size:clamp(13px,3.2vw,16px);
-  font-weight:600;cursor:pointer;
-  text-align:center;
-  min-height:50px;
-  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-  touch-action:manipulation;
+  border-radius:11px;
+  padding:clamp(10px,3vw,14px) 8px;
+  color:#fff;font-size:clamp(12px,3.2vw,15px);
+  font-weight:600;cursor:pointer;text-align:center;
+  min-height:48px;touch-action:manipulation;
 }
-.q-btn:active{background:rgba(41,182,246,.25);border-color:#29B6F6;}
-.q-btn.ok{background:rgba(76,175,80,.5)!important;border-color:#4CAF50!important;}
-.q-btn.no{background:rgba(244,67,54,.42)!important;border-color:#F44336!important;}
-.q-fb{text-align:center;margin-top:10px;font-size:14px;min-height:22px;color:#80CBC4;}
+.qbtn:active{background:rgba(41,182,246,.25);border-color:#29B6F6;}
+.qbtn.ok{background:rgba(76,175,80,.5)!important;border-color:#4CAF50!important;}
+.qbtn.no{background:rgba(244,67,54,.42)!important;border-color:#F44336!important;}
+.qfb{text-align:center;margin-top:9px;font-size:13px;min-height:20px;color:#80CBC4;}
 
 /* Reward grid */
-.rw-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0;}
-.rw-item{
+.rwgrid{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin:8px 0;}
+.rwitem{
   background:rgba(255,255,255,.08);
   border:2px solid rgba(255,255,255,.18);
-  border-radius:12px;padding:10px 12px;
+  border-radius:11px;padding:9px 10px;
   cursor:pointer;text-align:center;
-  min-width:85px;max-width:110px;
+  min-width:78px;max-width:105px;
   touch-action:manipulation;
 }
-.rw-item:active{border-color:#FFD700;background:rgba(255,215,0,.14);}
-.rw-item .ri{font-size:clamp(22px,6vw,34px);}
-.rw-item .rn{font-size:clamp(10px,2.2vw,12px);color:#ddd;margin-top:4px;}
+.rwitem:active,.rwitem.sel{border-color:#FFD700;background:rgba(255,215,0,.13);}
+.rwitem .ri{font-size:clamp(20px,5.5vw,30px);}
+.rwitem .rn{font-size:clamp(9px,2vw,11px);color:#ddd;margin-top:3px;}
 
-/* ============ MOBILE CONTROLS ============ */
-#m-ctrl{
+/* ===== MOBILE CONTROLS (PORTRAIT) ===== */
+#ctrl{
+  display:none;
   position:fixed;
-  bottom:max(0px, env(safe-area-inset-bottom));
-  left:0;right:0;
-  height:max(140px, calc(120px + env(safe-area-inset-bottom)));
-  pointer-events:none;z-index:55;display:none;
+  bottom:0;left:0;right:0;
+  height:160px;
+  pointer-events:none;
+  z-index:55;
+  padding-bottom:env(safe-area-inset-bottom);
 }
 
-/* Fixed joystick — bottom-left, large touch target */
-#joy-zone{
+/* Joystick — fixed bottom-left */
+#jzone{
   position:absolute;
-  bottom:max(16px, env(safe-area-inset-bottom, 16px));
-  left:max(16px, env(safe-area-inset-left, 16px));
-  width:120px;height:120px;
-  pointer-events:all;
-  touch-action:none;
+  bottom:12px;
+  left:12px;
+  width:130px;height:130px;
+  pointer-events:all;touch-action:none;
 }
-#joy-base{
+#jbase{
   width:100%;height:100%;
-  background:rgba(255,255,255,.13);
-  border:3px solid rgba(255,255,255,.35);
-  border-radius:50%;
-  position:relative;
-  box-shadow:0 4px 20px rgba(0,0,0,.4);
+  background:rgba(255,255,255,.1);
+  border:3px solid rgba(255,255,255,.28);
+  border-radius:50%;position:relative;
+  box-shadow:0 4px 18px rgba(0,0,0,.35);
 }
-#joy-knob{
-  width:46%;height:46%;
-  background:rgba(255,255,255,.6);
-  border-radius:50%;
+#jknob{
   position:absolute;
   top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  box-shadow:0 2px 8px rgba(0,0,0,.5);
+  width:48px;height:48px;
+  margin:-24px 0 0 -24px;
+  background:rgba(255,255,255,.58);
+  border-radius:50%;
+  box-shadow:0 2px 8px rgba(0,0,0,.45);
   pointer-events:none;
-  transition:transform .05s linear;
+  will-change:transform;
 }
 
-/* Camera swipe zone — right 40% of screen */
-#cam-zone{
+/* Invisible camera-rotate zone — center+right, above buttons */
+#camzone{
   position:absolute;
-  bottom:0;right:0;
-  width:40%;height:100%;
-  pointer-events:all;
-  touch-action:none;
+  top:0;right:0;
+  width:55%;height:100%;
+  pointer-events:all;touch-action:none;
 }
 
 /* Action buttons — bottom-right */
-#act-btns{
+#abtns{
   position:absolute;
-  bottom:max(16px, env(safe-area-inset-bottom, 16px));
-  right:max(14px, env(safe-area-inset-right, 14px));
+  bottom:16px;right:12px;
   display:flex;flex-direction:column;gap:10px;
   pointer-events:all;
 }
-.act-btn{
-  width:56px;height:56px;
-  background:rgba(0,0,0,.6);
-  border:2px solid rgba(255,255,255,.35);
+.abtn{
+  width:58px;height:58px;
+  background:rgba(0,0,0,.62);
+  border:2px solid rgba(255,255,255,.32);
   border-radius:50%;
   font-size:22px;color:#fff;
-  cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 14px rgba(0,0,0,.5);
-  touch-action:manipulation;
-  pointer-events:all;
+  box-shadow:0 3px 12px rgba(0,0,0,.4);
+  touch-action:manipulation;pointer-events:all;cursor:pointer;
 }
-.act-btn:active{background:rgba(255,255,255,.22);transform:scale(.92);}
-#btn-door{opacity:.38;transition:opacity .2s;}
-#btn-door.near{opacity:1;}
+.abtn:active{background:rgba(255,255,255,.2);}
+#abtn-door{opacity:.35;transition:opacity .18s;}
+#abtn-door.near{opacity:1;}
+
+/* small label under joystick arrows */
+.jlabel{
+  position:absolute;
+  font-size:9px;color:rgba(255,255,255,.45);
+  font-weight:700;pointer-events:none;
+}
 </style>
 </head>
 <body>
 
-<!-- Portrait Gate -->
-<div id="portrait-gate">
-  <div class="pg-icon">📱</div>
-  <h2>Putar Layar Dulu! 🔄</h2>
-  <p>Game ini dimainkan dalam mode<br><strong style="color:#FFD700;">Landscape (Horizontal)</strong> 🎮<br><br>Putar iPhone-mu sekarang!</p>
+<!-- ===== HUD ===== -->
+<div id="hud">
+  <span class="pill" id="hlv">Level 1</span>
+  <span class="pill" id="hcoin">🪙 0/45</span>
+  <span class="pill" id="hroom">🏠</span>
+  <span class="pill" id="hcam">📷</span>
 </div>
 
-<div id="game-wrap">
+<!-- ===== DOOR HINT ===== -->
+<div id="dhint">🔐 Tap tombol 🚪 untuk buka pintu!</div>
 
-  <!-- HUD -->
-  <div id="hud">
-    <span class="pill" id="hud-lv">Level 1</span>
-    <span class="pill" id="hud-coins">🪙 0/45</span>
-    <span class="pill" id="hud-room">🏠</span>
-    <span class="pill" id="hud-cam">📷</span>
-  </div>
+<!-- ===== NPC DIALOG ===== -->
+<div id="ndlg">
+  <div class="nn" id="nname"></div>
+  <div class="nt" id="ntext"></div>
+  <div class="nb" id="nbtns"></div>
+</div>
 
-  <!-- Door Hint -->
-  <div id="door-hint">🔐 Tekan tombol 🚪 untuk buka pintu!</div>
-
-  <!-- NPC Dialog -->
-  <div id="npc-dlg">
-    <div class="nname" id="npc-name"></div>
-    <div class="ntext" id="npc-text"></div>
-    <div class="nbtn-row" id="npc-btns"></div>
-  </div>
-
-  <!-- Mobile Controls -->
-  <div id="m-ctrl">
-    <div id="joy-zone">
-      <div id="joy-base"><div id="joy-knob"></div></div>
-    </div>
-    <div id="cam-zone"></div>
-    <div id="act-btns">
-      <button class="act-btn" id="btn-cam" ontouchstart="toggleCamera()">📷</button>
-      <button class="act-btn" id="btn-door" ontouchstart="interactDoor()">🚪</button>
+<!-- ===== CONTROLS ===== -->
+<div id="ctrl">
+  <div id="jzone">
+    <div id="jbase">
+      <div id="jknob"></div>
+      <!-- direction arrows for visibility -->
+      <span class="jlabel" style="top:4px;left:50%;transform:translateX(-50%)">▲</span>
+      <span class="jlabel" style="bottom:4px;left:50%;transform:translateX(-50%)">▼</span>
+      <span class="jlabel" style="left:4px;top:50%;transform:translateY(-50%)">◀</span>
+      <span class="jlabel" style="right:4px;top:50%;transform:translateY(-50%)">▶</span>
     </div>
   </div>
-
-  <!-- Char Select -->
-  <div class="ov" id="ov-char">
-    <div class="panel">
-      <h1>🏠 Petualangan Suar & Pijar</h1>
-      <h2>Pilih karaktermu untuk bermain!</h2>
-      <div class="cards">
-        <div class="char-card" ontouchstart="selectChar('suar')" onclick="selectChar('suar')">
-          <span class="ce">🇵🇹</span>
-          <h3>Suar</h3>
-          <p>7 tahun · Portugal #7</p>
-        </div>
-        <div class="char-card" ontouchstart="selectChar('pijar')" onclick="selectChar('pijar')">
-          <span class="ce">🇪🇸</span>
-          <h3>Pijar</h3>
-          <p>8 tahun · Barcelona #10</p>
-        </div>
-      </div>
-      <p style="color:#555;font-size:11px;text-align:center;margin-top:14px;">
-        Mobile: Joystick kiri = gerak · Seret kanan = putar kamera<br>
-        Tombol 🚪 = buka pintu · Tombol 📷 = ganti sudut pandang
-      </p>
-    </div>
+  <div id="camzone"></div>
+  <div id="abtns">
+    <button class="abtn" id="abtn-cam">📷</button>
+    <button class="abtn" id="abtn-door">🚪</button>
   </div>
+</div>
 
-  <!-- Question Overlay -->
-  <div class="ov" id="ov-q" style="display:none;">
-    <div class="panel">
-      <h2 id="q-lbl" style="font-size:13px;margin-bottom:12px;">🔐 Jawab 3 Pertanyaan!</h2>
-      <div class="q-progress" id="q-prog"></div>
-      <div class="q-subj" id="q-subj"></div>
-      <div class="q-txt" id="q-txt"></div>
-      <div class="q-grid" id="q-opts"></div>
-      <div class="q-fb" id="q-fb"></div>
+<!-- ===== OVERLAYS ===== -->
+
+<!-- Char select -->
+<div class="ov show" id="ovchar">
+  <div class="panel">
+    <h1>🏠 Petualangan Suar & Pijar</h1>
+    <h2>Pilih karaktermu!</h2>
+    <div class="cards">
+      <div class="ccard" id="btn-suar"><span class="ce">🇵🇹</span><h3>Suar</h3><p>7 th · Portugal #7</p></div>
+      <div class="ccard" id="btn-pijar"><span class="ce">🇪🇸</span><h3>Pijar</h3><p>8 th · Barcelona #10</p></div>
     </div>
+    <p style="color:#444;font-size:10px;text-align:center;margin-top:12px;">
+      Joystick kiri = gerak · Seret kanan = putar kamera<br>
+      🚪 = buka pintu · 📷 = ganti sudut pandang
+    </p>
   </div>
+</div>
 
-  <!-- LV1 Win -->
-  <div class="ov" id="ov-lv1win" style="display:none;">
-    <div class="panel">
-      <h1>🎉 45 Koin Terkumpul!</h1>
-      <h2>Pilih jersey Liga Inggris hadiahmu:</h2>
-      <div class="rw-grid" id="jersey-grid"></div>
-      <button class="btn-main" id="lv1-next" style="display:none;" onclick="startLv2()">Lanjut Level 2 ➡️</button>
+<!-- Question -->
+<div class="ov" id="ovq">
+  <div class="panel">
+    <h2 id="qlbl" style="font-size:12px;margin-bottom:10px;">🔐 Jawab 3 Pertanyaan!</h2>
+    <div class="qprog" id="qprog"></div>
+    <div class="qsubj" id="qsubj"></div>
+    <div class="qtxt" id="qtxt"></div>
+    <div class="qgrid" id="qopts"></div>
+    <div class="qfb" id="qfb"></div>
+  </div>
+</div>
+
+<!-- LV1 Win -->
+<div class="ov" id="ovlv1">
+  <div class="panel">
+    <h1>🎉 45 Koin Terkumpul!</h1>
+    <h2>Pilih jersey Liga Inggris hadiahmu:</h2>
+    <div class="rwgrid" id="jgrid"></div>
+    <button class="bmain" id="lv1next" style="display:none;" id="lv1next">Lanjut Level 2 ➡️</button>
+  </div>
+</div>
+
+<!-- LV2 -->
+<div class="ov" id="ovlv2">
+  <div class="panel">
+    <h1>🧩 Susun Lego!</h1>
+    <div style="text-align:center;margin:8px 0;">
+      <span id="lv2tgt" style="font-size:clamp(44px,12vw,64px);display:block;"></span>
+      <p id="lv2q" style="color:#FFC107;font-weight:700;font-size:clamp(11px,3vw,15px);margin-top:5px;"></p>
     </div>
+    <div style="display:flex;gap:9px;justify-content:center;flex-wrap:wrap;" id="lv2opts"></div>
+    <p id="lv2sc" style="text-align:center;color:#A5D6A7;margin-top:10px;font-size:13px;"></p>
   </div>
+</div>
 
-  <!-- LV2 -->
-  <div class="ov" id="ov-lv2" style="display:none;">
-    <div class="panel">
-      <h1>🧩 Susun Lego!</h1>
-      <div style="text-align:center;margin:10px 0;">
-        <span id="lv2-tgt" style="font-size:clamp(48px,12vw,68px);display:block;"></span>
-        <p id="lv2-q" style="color:#FFC107;font-weight:700;font-size:clamp(12px,3vw,16px);margin-top:6px;"></p>
-      </div>
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;" id="lv2-opts"></div>
-      <p id="lv2-sc" style="text-align:center;color:#A5D6A7;margin-top:12px;font-size:14px;"></p>
-    </div>
+<!-- LV3 -->
+<div class="ov" id="ovlv3">
+  <div class="panel">
+    <h1>📐 Matematika!</h1>
+    <div class="qprog" id="lv3prog"></div>
+    <div style="font-size:clamp(18px,5.5vw,26px);font-weight:800;color:#fff;text-align:center;
+      padding:12px;background:rgba(255,255,255,.07);border-radius:11px;margin:8px 0;" id="lv3q"></div>
+    <div class="qgrid" id="lv3opts"></div>
+    <p id="lv3sc" style="text-align:center;color:#80CBC4;margin-top:9px;font-size:13px;"></p>
   </div>
+</div>
 
-  <!-- LV3 -->
-  <div class="ov" id="ov-lv3" style="display:none;">
-    <div class="panel">
-      <h1>📐 Matematika!</h1>
-      <div class="q-progress" id="lv3-prog"></div>
-      <div style="font-size:clamp(20px,5.5vw,28px);font-weight:800;color:#fff;text-align:center;
-        padding:14px;background:rgba(255,255,255,.07);border-radius:12px;margin:10px 0;" id="lv3-q"></div>
-      <div class="q-grid" id="lv3-opts"></div>
-      <p id="lv3-sc" style="text-align:center;color:#80CBC4;margin-top:10px;font-size:14px;"></p>
-    </div>
+<!-- Final Win -->
+<div class="ov" id="ovwin">
+  <div class="panel" style="text-align:center;">
+    <h1>🏆 SELAMAT! KAMU HEBAT! 🏆</h1>
+    <p id="wname" style="color:#A5D6A7;font-size:clamp(12px,3.5vw,16px);margin:7px 0;"></p>
+    <div style="font-size:clamp(32px,8vw,48px);margin:10px 0;">🎉⚽🧩🏅</div>
+    <div id="wrewards" style="color:#FFD700;font-size:clamp(12px,3vw,15px);line-height:2;"></div>
+    <button class="bmain" id="btn-restart">Main Lagi! 🔄</button>
   </div>
+</div>
 
-  <!-- Final Win -->
-  <div class="ov" id="ov-win" style="display:none;">
-    <div class="panel" style="text-align:center;">
-      <h1>🏆 SELAMAT! KAMU HEBAT! 🏆</h1>
-      <p id="win-name" style="color:#A5D6A7;font-size:clamp(13px,3vw,17px);margin:8px 0;"></p>
-      <div style="font-size:clamp(36px,8vw,52px);margin:12px 0;">🎉⚽🧩🏅</div>
-      <div id="win-rewards" style="color:#FFD700;font-size:clamp(13px,3vw,16px);line-height:2;"></div>
-      <button class="btn-main" ontouchstart="location.reload()" onclick="location.reload()">Main Lagi! 🔄</button>
-    </div>
-  </div>
-
-</div><!-- /game-wrap -->
-
+<!-- ===== THREE.JS ===== -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-/* ====================================================
-   PETUALANGAN SUAR & PIJAR — iOS/Android Optimized
-   Three.js r128
-   ==================================================== */
 'use strict';
 
-// ——— iOS canvas roundRect polyfill ———
-if (!CanvasRenderingContext2D.prototype.roundRect) {
-  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
+/* ========================================================
+   PETUALANGAN SUAR & PIJAR
+   Portrait / Landscape · iOS + Android · Three.js r128
+   ======================================================== */
+
+// ── Canvas roundRect polyfill ──
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
     this.beginPath();
-    this.moveTo(x+r,y);this.lineTo(x+w-r,y);
-    this.quadraticCurveTo(x+w,y,x+w,y+r);
+    this.moveTo(x+r,y);this.lineTo(x+w-r,y);this.quadraticCurveTo(x+w,y,x+w,y+r);
     this.lineTo(x+w,y+h-r);this.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
     this.lineTo(x+r,y+h);this.quadraticCurveTo(x,y+h,x,y+h-r);
     this.lineTo(x,y+r);this.quadraticCurveTo(x,y,x+r,y);this.closePath();
   };
 }
 
-// ——— RENDERER + SCENE ———
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87CEEB);
-scene.fog = new THREE.Fog(0x87CEEB, 26, 55);
+// ── Accurate viewport dimensions (iOS Safari fix) ──
+const VW=()=>(window.visualViewport?window.visualViewport.width:innerWidth);
+const VH=()=>(window.visualViewport?window.visualViewport.height:innerHeight);
 
-// Use visualViewport for accurate iOS dimensions
-function vw(){ return window.visualViewport ? window.visualViewport.width  : window.innerWidth;  }
-function vh(){ return window.visualViewport ? window.visualViewport.height : window.innerHeight; }
+// ── Three.js setup ──
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x87CEEB);
+scene.fog=new THREE.Fog(0x87CEEB,22,52);
 
-const camera = new THREE.PerspectiveCamera(68, vw()/vh(), 0.1, 110);
-camera.position.set(0, 5, 10);
+const camera=new THREE.PerspectiveCamera(65,VW()/VH(),0.1,110);
+camera.position.set(0,6,10);
 
-const renderer = new THREE.WebGLRenderer({
-  antialias: false,               // off for mobile perf
-  powerPreference:'low-power',    // iOS battery saving
-  preserveDrawingBuffer: false,
-});
-renderer.setSize(vw(), vh());
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.shadowMap.enabled = false; // off for iOS perf
-renderer.domElement.id = 'gc';
-document.getElementById('game-wrap').prepend(renderer.domElement);
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'low-power'});
+renderer.setSize(VW(),VH());
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=false;
+renderer.domElement.id='gc';
+document.body.prepend(renderer.domElement);
 
-// Handle resize + orientation change on iOS
+// Resize handler
 function onResize(){
-  // Small delay on iOS to get correct dimensions after orientation change
   setTimeout(()=>{
-    camera.aspect = vw()/vh();
+    camera.aspect=VW()/VH();
     camera.updateProjectionMatrix();
-    renderer.setSize(vw(), vh());
-  }, 100);
+    renderer.setSize(VW(),VH());
+  },80);
 }
-window.addEventListener('resize', onResize);
-if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
-window.addEventListener('orientationchange', onResize);
+window.addEventListener('resize',onResize);
+window.addEventListener('orientationchange',onResize);
+if(window.visualViewport)window.visualViewport.addEventListener('resize',onResize);
 
-// Lights — higher ambient for no-shadow mobile
-scene.add(new THREE.AmbientLight(0xffffff, 0.9));
-const sun = new THREE.DirectionalLight(0xfff5e0, 0.6);
-sun.position.set(15, 25, 10);
-scene.add(sun);
-scene.add(new THREE.HemisphereLight(0x87CEEB, 0x4CAF50, 0.4));
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff,0.92));
+const sun=new THREE.DirectionalLight(0xfff5e0,0.55);
+sun.position.set(15,25,10);scene.add(sun);
+scene.add(new THREE.HemisphereLight(0x87CEEB,0x4CAF50,0.38));
 
-// ——— CONSTANTS ———
-const WALL_H=4.5, WALL_T=0.5, DOOR_H=3.2;
-const COIN_TOTAL=45;
-const PSPD=0.1, NSPD=0.03;
+// ── Constants ──
+const WH=4.5,WT=0.5,DH=3.2;
+const CTOTAL=45;
+const PSP=0.10, NSP=0.030;
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 
-// ——— ROOM DEFS ———
+// ── Room definitions ──
 const ROOMS=[
-  {id:'living',    x0:-7,z0:-17,x1:23,z1:13, fc:0xFFF8E7,wc:0xEED5A0,name:'Living Room'},
-  {id:'kKakak',   x0:-26,z0:-25,x1:-7,z1:-7, fc:0xE8F5E9,wc:0xA5D6A7,name:'Kamar Kakak'},
-  {id:'rTV',      x0:-26,z0:-7, x1:-7,z1:9,  fc:0xE3F2FD,wc:0x90CAF9,name:'Ruang TV'},
-  {id:'kKiri',    x0:-26,z0:9,  x1:-7,z1:25, fc:0xF3E5F5,wc:0xCE93D8,name:'Kamar'},
-  {id:'kKanan',   x0:23, z0:-17,x1:38,z1:13, fc:0xFCE4EC,wc:0xF48FB1,name:'Kamar'},
-  {id:'kMandi',   x0:-7, z0:13, x1:12,z1:27, fc:0xB2EBF2,wc:0x80DEEA,name:'Kamar Mandi'},
-  {id:'dapur',    x0:12, z0:13, x1:38,z1:27, fc:0xFFFDE7,wc:0xFFF176,name:'Dapur'},
+  {id:'living',   x0:-7, z0:-17,x1:23,z1:13, fc:0xFFF8E7,wc:0xEED5A0,nm:'Living Room'},
+  {id:'kKakak',  x0:-26,z0:-25,x1:-7,z1:-7,  fc:0xE8F5E9,wc:0xA5D6A7,nm:'Kamar Kakak'},
+  {id:'rTV',     x0:-26,z0:-7, x1:-7,z1:9,   fc:0xE3F2FD,wc:0x90CAF9,nm:'Ruang TV'},
+  {id:'kKiri',   x0:-26,z0:9,  x1:-7,z1:25,  fc:0xF3E5F5,wc:0xCE93D8,nm:'Kamar'},
+  {id:'kKanan',  x0:23, z0:-17,x1:38,z1:13,  fc:0xFCE4EC,wc:0xF48FB1,nm:'Kamar'},
+  {id:'kMandi',  x0:-7, z0:13, x1:12,z1:27,  fc:0xB2EBF2,wc:0x80DEEA,nm:'Kamar Mandi'},
+  {id:'dapur',   x0:12, z0:13, x1:38,z1:27,  fc:0xFFFDE7,wc:0xFFF176,nm:'Dapur'},
 ];
 
-// ——— DOOR DEFS ———
-// wallDir: EW = vertical wall (constant x), NS = horizontal wall (constant z)
+// ── Door definitions ──
 const DDEFS=[
-  {id:'d01',wallDir:'EW',x:-7, zS:-21,zE:-14,rooms:['kKakak','living']},
-  {id:'d02',wallDir:'NS',z:-7, xS:-23,xE:-15,rooms:['kKakak','rTV']},
-  {id:'d03',wallDir:'EW',x:-7, zS:-4, zE:4,  rooms:['rTV','living']},
-  {id:'d04',wallDir:'NS',z:9,  xS:-23,xE:-15,rooms:['rTV','kKiri']},
-  {id:'d05',wallDir:'EW',x:23, zS:-7, zE:2,  rooms:['living','kKanan']},
-  {id:'d06',wallDir:'NS',z:13, xS:-3, xE:5,  rooms:['living','kMandi']},
-  {id:'d07',wallDir:'NS',z:13, xS:15, xE:23, rooms:['living','dapur']},
-  {id:'d08',wallDir:'NS',z:13, xS:27, xE:36, rooms:['kKanan','dapur']},
-  {id:'d09',wallDir:'EW',x:12, zS:17, zE:25, rooms:['kMandi','dapur']},
-  {id:'d10',wallDir:'EW',x:-7, zS:15, zE:23, rooms:['kKiri','kMandi']},
+  {id:'d01',wd:'EW',x:-7, zS:-21,zE:-14,rm:['kKakak','living']},
+  {id:'d02',wd:'NS',z:-7, xS:-23,xE:-15,rm:['kKakak','rTV']},
+  {id:'d03',wd:'EW',x:-7, zS:-4, zE:4,  rm:['rTV','living']},
+  {id:'d04',wd:'NS',z:9,  xS:-23,xE:-15,rm:['rTV','kKiri']},
+  {id:'d05',wd:'EW',x:23, zS:-7, zE:2,  rm:['living','kKanan']},
+  {id:'d06',wd:'NS',z:13, xS:-3, xE:5,  rm:['living','kMandi']},
+  {id:'d07',wd:'NS',z:13, xS:15, xE:23, rm:['living','dapur']},
+  {id:'d08',wd:'NS',z:13, xS:27, xE:36, rm:['kKanan','dapur']},
+  {id:'d09',wd:'EW',x:12, zS:17, zE:25, rm:['kMandi','dapur']},
+  {id:'d10',wd:'EW',x:-7, zS:15, zE:23, rm:['kKiri','kMandi']},
 ];
 
-// ——— QUESTIONS ———
+// ── Questions ──
 const QP=[
   {s:'Matematika 🔢',q:'3 + 5 = ?',  o:['8','7','9','6'],   a:0},
   {s:'Matematika 🔢',q:'10 - 4 = ?', o:['5','6','7','4'],   a:1},
@@ -524,24 +469,24 @@ const QP=[
   {s:'Matematika 🔢',q:'8 - 5 = ?',  o:['4','3','2','5'],   a:1},
   {s:'Matematika 🔢',q:'4 + 7 = ?',  o:['10','12','11','9'],a:2},
   {s:'Matematika 🔢',q:'15 - 6 = ?', o:['8','10','9','7'],  a:2},
-  {s:'Agama Islam 🕌',q:'Kitab suci umat Islam...',o:['Injil','Taurat','Al-Quran','Zabur'],a:2},
-  {s:'Agama Islam 🕌',q:'Rukun Islam ada berapa?',o:['3','4','6','5'],a:3},
-  {s:'Agama Islam 🕌',q:'Tempat ibadah Islam...',  o:['Gereja','Masjid','Pura','Vihara'],a:1},
-  {s:'Agama Islam 🕌',q:'Nabi terakhir Islam...',  o:['Isa AS','Musa AS','Ibrahim AS','Muhammad SAW'],a:3},
-  {s:'Agama Islam 🕌',q:'Hari raya setelah Ramadan...',o:['Idul Adha','Maulid Nabi','Idul Fitri','Isra Miraj'],a:2},
-  {s:'Agama Islam 🕌',q:'Sholat wajib sehari...',  o:['4 kali','3 kali','5 kali','6 kali'],a:2},
-  {s:'IPAS 🌱',q:'Hewan penghasil susu...', o:['Ayam','Ikan','Sapi','Rusa'],       a:2},
-  {s:'IPAS 🌱',q:'Matahari terbit dari...', o:['Barat','Selatan','Utara','Timur'], a:3},
-  {s:'IPAS 🌱',q:'Manusia bernapas dg...', o:['Jantung','Ginjal','Paru-paru','Hati'],a:2},
-  {s:'IPAS 🌱',q:'Warna daun sehat...',    o:['Kuning','Merah','Biru','Hijau'],    a:3},
-  {s:'IPAS 🌱',q:'Air mendidih pada suhu...',o:['50°C','0°C','100°C','75°C'],     a:2},
-  {s:'IPAS 🌱',q:'Hewan yang bisa terbang...',o:['Ular','Burung','Kucing','Ikan'],a:1},
-  {s:'Bahasa Inggris 🌍',q:'"Cat" artinya...',   o:['Anjing','Kambing','Sapi','Kucing'],   a:3},
-  {s:'Bahasa Inggris 🌍',q:'"Book" artinya...',  o:['Pensil','Buku','Tas','Penggaris'],    a:1},
-  {s:'Bahasa Inggris 🌍',q:'"Red" = warna...',   o:['Biru','Kuning','Merah','Hijau'],      a:2},
-  {s:'Bahasa Inggris 🌍',q:'"School" artinya...', o:['Rumah','Pasar','Taman','Sekolah'],   a:3},
-  {s:'Bahasa Inggris 🌍',q:'"Happy" artinya...',  o:['Sedih','Marah','Takut','Senang'],    a:3},
-  {s:'Bahasa Inggris 🌍',q:'"Good morning" =...', o:['Selamat malam','Selamat siang','Selamat pagi','Selamat sore'],a:2},
+  {s:'Agama Islam 🕌',q:'Kitab suci umat Islam...',    o:['Injil','Taurat','Al-Quran','Zabur'],          a:2},
+  {s:'Agama Islam 🕌',q:'Rukun Islam ada berapa?',     o:['3','4','6','5'],                               a:3},
+  {s:'Agama Islam 🕌',q:'Tempat ibadah Islam...',      o:['Gereja','Masjid','Pura','Vihara'],             a:1},
+  {s:'Agama Islam 🕌',q:'Nabi terakhir Islam...',      o:['Isa AS','Musa AS','Ibrahim AS','Muhammad SAW'],a:3},
+  {s:'Agama Islam 🕌',q:'Hari raya setelah Ramadan...', o:['Idul Adha','Maulid Nabi','Idul Fitri','Isra Miraj'],a:2},
+  {s:'Agama Islam 🕌',q:'Sholat wajib sehari...',      o:['4 kali','3 kali','5 kali','6 kali'],           a:2},
+  {s:'IPAS 🌱',q:'Hewan penghasil susu...',  o:['Ayam','Ikan','Sapi','Rusa'],        a:2},
+  {s:'IPAS 🌱',q:'Matahari terbit dari...',  o:['Barat','Selatan','Utara','Timur'],  a:3},
+  {s:'IPAS 🌱',q:'Manusia bernapas dg...',   o:['Jantung','Ginjal','Paru-paru','Hati'],a:2},
+  {s:'IPAS 🌱',q:'Warna daun sehat...',      o:['Kuning','Merah','Biru','Hijau'],    a:3},
+  {s:'IPAS 🌱',q:'Air mendidih pada...',     o:['50°C','0°C','100°C','75°C'],        a:2},
+  {s:'IPAS 🌱',q:'Hewan bisa terbang...',    o:['Ular','Burung','Kucing','Ikan'],    a:1},
+  {s:'Bahasa Inggris 🌍',q:'"Cat" artinya...',      o:['Anjing','Kambing','Sapi','Kucing'],      a:3},
+  {s:'Bahasa Inggris 🌍',q:'"Book" artinya...',     o:['Pensil','Buku','Tas','Penggaris'],       a:1},
+  {s:'Bahasa Inggris 🌍',q:'"Red" = warna...',      o:['Biru','Kuning','Merah','Hijau'],         a:2},
+  {s:'Bahasa Inggris 🌍',q:'"School" artinya...',   o:['Rumah','Pasar','Taman','Sekolah'],       a:3},
+  {s:'Bahasa Inggris 🌍',q:'"Happy" artinya...',    o:['Sedih','Marah','Takut','Senang'],        a:3},
+  {s:'Bahasa Inggris 🌍',q:'"Good morning" = ...',  o:['Selamat malam','Selamat siang','Selamat pagi','Selamat sore'],a:2},
 ];
 
 const JERSEYS=[
@@ -552,8 +497,8 @@ const JERSEYS=[
 const LEGO=[{e:'🏍️',n:'Motor'},{e:'🚗',n:'Mobil'},{e:'✈️',n:'Pesawat'},{e:'🚌',n:'Bus'}];
 
 function genMath(){
-  const qs=[]; const types=['add','sub','mul','add','sub'];
-  for(const t of types){
+  const qs=[];
+  for(const t of ['add','sub','mul','add','sub']){
     let a,b,ans,text;
     if(t==='add'){a=rnd(10,49);b=rnd(5,39);ans=a+b;text=`${a} + ${b} = ?`;}
     else if(t==='sub'){a=rnd(20,59);b=rnd(5,19);if(b>a)[a,b]=[b,a];ans=a-b;text=`${a} - ${b} = ?`;}
@@ -565,7 +510,7 @@ function genMath(){
   return qs;
 }
 
-// ——— MATERIAL CACHE (shared, non-transparent) ———
+// ── Material cache (non-animated shared materials) ──
 const MC={};
 function lm(c,x){
   const k=c+'|'+JSON.stringify(x||{});
@@ -573,115 +518,83 @@ function lm(c,x){
   return MC[k];
 }
 
-// ——— BOX ———
+// ── Box helper ──
 function bx(x,y,z,w,h,d,col,extra){
   const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),lm(col,extra));
   m.position.set(x,y,z);scene.add(m);return m;
 }
 
-// ——— WALL BUILDING ———
-function wsX(x0,x1,z,c){const l=x1-x0;if(l<.01)return;bx((x0+x1)/2,WALL_H/2,z,l,WALL_H,WALL_T,c);}
-function wsZ(x,z0,z1,c){const l=z1-z0;if(l<.01)return;bx(x,WALL_H/2,(z0+z1)/2,WALL_T,WALL_H,l,c);}
-function gapX(z,x0,x1,rid){
-  return DDEFS.filter(d=>d.wallDir==='NS'&&Math.abs(d.z-z)<.1&&d.rooms.includes(rid))
+// ── Wall building ──
+function wsX(x0,x1,z,c){const l=x1-x0;if(l<.01)return;bx((x0+x1)/2,WH/2,z,l,WH,WT,c);}
+function wsZ(x,z0,z1,c){const l=z1-z0;if(l<.01)return;bx(x,WH/2,(z0+z1)/2,WT,WH,l,c);}
+function gX(z,x0,x1,rid){
+  return DDEFS.filter(d=>d.wd==='NS'&&Math.abs(d.z-z)<.1&&d.rm.includes(rid))
     .map(d=>({s:Math.max(d.xS,x0),e:Math.min(d.xE,x1)})).filter(g=>g.e>g.s);
 }
-function gapZ(x,z0,z1,rid){
-  return DDEFS.filter(d=>d.wallDir==='EW'&&Math.abs(d.x-x)<.1&&d.rooms.includes(rid))
+function gZ(x,z0,z1,rid){
+  return DDEFS.filter(d=>d.wd==='EW'&&Math.abs(d.x-x)<.1&&d.rm.includes(rid))
     .map(d=>({s:Math.max(d.zS,z0),e:Math.min(d.zE,z1)})).filter(g=>g.e>g.s);
 }
-function bwX(x0,x1,z,gaps,c){
-  const sg=[...gaps].sort((a,b)=>a.s-b.s);let cur=x0;
+function bwX(x0,x1,z,gs,c){
+  const sg=[...gs].sort((a,b)=>a.s-b.s);let cur=x0;
   for(const g of sg){wsX(cur,g.s,z,c);cur=g.e;}wsX(cur,x1,z,c);
 }
-function bwZ(x,z0,z1,gaps,c){
-  const sg=[...gaps].sort((a,b)=>a.s-b.s);let cur=z0;
+function bwZ(x,z0,z1,gs,c){
+  const sg=[...gs].sort((a,b)=>a.s-b.s);let cur=z0;
   for(const g of sg){wsZ(x,cur,g.s,c);cur=g.e;}wsZ(x,cur,z1,c);
 }
 
-// ——— BUILD HOUSE ———
+// ── Build house ──
 function buildHouse(){
-  // Ground
   const gr=new THREE.Mesh(new THREE.PlaneGeometry(200,200),lm(0x4CAF50));
   gr.rotation.x=-Math.PI/2;gr.position.y=-0.05;scene.add(gr);
-
   for(const r of ROOMS){
-    const {id,x0,z0,x1,z1,fc,wc}=r;
+    const{id,x0,z0,x1,z1,fc,wc}=r;
     const rw=x1-x0,rd=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
-    // Floor
     const fl=new THREE.Mesh(new THREE.PlaneGeometry(rw,rd),lm(fc));
     fl.rotation.x=-Math.PI/2;fl.position.set(cx,.01,cz);scene.add(fl);
-    // Ceiling (backside, semi-transparent hint)
-    const cl=new THREE.Mesh(new THREE.PlaneGeometry(rw,rd),
-      lm(0xF0F0F0,{transparent:true,opacity:.25,side:THREE.BackSide}));
-    cl.rotation.x=Math.PI/2;cl.position.set(cx,WALL_H,cz);scene.add(cl);
-    // Walls
-    bwX(x0,x1,z0,gapX(z0,x0,x1,id),wc);
-    bwX(x0,x1,z1,gapX(z1,x0,x1,id),wc);
-    bwZ(x0,z0,z1,gapZ(x0,z0,z1,id),wc);
-    bwZ(x1,z0,z1,gapZ(x1,z0,z1,id),wc);
-    // Skirting
+    const cl=new THREE.Mesh(new THREE.PlaneGeometry(rw,rd),lm(0xF0F0F0,{transparent:true,opacity:.22,side:THREE.BackSide}));
+    cl.rotation.x=Math.PI/2;cl.position.set(cx,WH,cz);scene.add(cl);
+    bwX(x0,x1,z0,gX(z0,x0,x1,id),wc);bwX(x0,x1,z1,gX(z1,x0,x1,id),wc);
+    bwZ(x0,z0,z1,gZ(x0,z0,z1,id),wc);bwZ(x1,z0,z1,gZ(x1,z0,z1,id),wc);
     const sk=0x795548,sh=0.13;
     bx(cx,sh/2,z0,rw,sh,sh,sk);bx(cx,sh/2,z1,rw,sh,sh,sk);
     bx(x0,sh/2,cz,sh,sh,rd,sk);bx(x1,sh/2,cz,sh,sh,rd,sk);
   }
-  buildFurniture();
-}
-
-function buildFurniture(){
-  // Living Room
-  bx(4,.5,-10,7,1,3,0xFF8A65);   // sofa
-  bx(4,1.3,-11.4,7,.5,.5,0xFF7043); // sofa back
-  bx(4,.5,-8,4,.55,2.5,0x8D6E63);// coffee table
-  bx(16,.5,-14,4,1,.5,0x37474F); // TV stand
-  bx(16,1.3,-14.1,3.5,1.5,.1,0x1565C0); // TV
-  bx(13,.5,-12,3.5,1,2.5,0x795548); // desk Akang
-  bx(13,.95,-12,3,.1,2,0xB0BEC5);   // desk top
-  // Kamar Kakak
-  bx(-18,.5,-21,9,1.5,5,0xF48FB1); // bed
-  bx(-18,1.3,-22.8,9,.4,1.5,0xF06292);
-  bx(-10,.5,-17,4.5,.8,2.5,0x795548); // desk
-  bx(-10,.95,-17,4,.1,2,0x90A4AE);
-  // Ruang TV
-  bx(-18,.5,-3.5,9,1.5,4.5,0x81D4FA); // couch
-  bx(-18,1.3,-5.2,9,.4,1.5,0x4FC3F7);
-  bx(-10,.5,-1.5,4,1,.5,0x37474F);
-  bx(-10,1.4,-1.6,3.5,1.6,.1,0x1565C0);
-  // Kamar Kiri
-  bx(-18,.5,17,9,1.5,5,0xCE93D8);
-  bx(-18,1.3,15,9,.4,1.5,0xAB47BC);
+  // Furniture
+  bx(4,.5,-10,7,1,3,0xFF8A65);bx(4,1.3,-11.4,7,.5,.5,0xFF7043);
+  bx(4,.5,-8,4,.55,2.5,0x8D6E63);
+  bx(16,.5,-14,4,1,.5,0x37474F);bx(16,1.3,-14.1,3.5,1.5,.1,0x1565C0);
+  bx(13,.5,-12,3.5,1,2.5,0x795548);bx(13,.95,-12,3,.1,2,0xB0BEC5);
+  bx(-18,.5,-21,9,1.5,5,0xF48FB1);bx(-18,1.3,-22.8,9,.4,1.5,0xF06292);
+  bx(-10,.5,-17,4.5,.8,2.5,0x795548);bx(-10,.95,-17,4,.1,2,0x90A4AE);
+  bx(-18,.5,-3.5,9,1.5,4.5,0x81D4FA);bx(-18,1.3,-5.2,9,.4,1.5,0x4FC3F7);
+  bx(-10,.5,-1.5,4,1,.5,0x37474F);bx(-10,1.4,-1.6,3.5,1.6,.1,0x1565C0);
+  bx(-18,.5,17,9,1.5,5,0xCE93D8);bx(-18,1.3,15,9,.4,1.5,0xAB47BC);
   bx(-10,.5,13.5,4.5,.8,2.5,0x795548);
-  // Kamar Kanan
-  bx(30,.5,-10,9,1.5,5.5,0xFF8A65);
-  bx(30,1.3,-12,9,.4,1.5,0xFF7043);
+  bx(30,.5,-10,9,1.5,5.5,0xFF8A65);bx(30,1.3,-12,9,.4,1.5,0xFF7043);
   bx(26,.5,5,4.5,.8,2.5,0x795548);
-  // Kamar Mandi
-  bx(-1,.5,18,2.5,1.5,1.5,0xEEEEEE);
-  bx(6,.4,20,3,1,2,0xEEEEEE);
+  bx(-1,.5,18,2.5,1.5,1.5,0xEEEEEE);bx(6,.4,20,3,1,2,0xEEEEEE);
   bx(6,.05,19,3,.2,2,0x80DEEA,{transparent:true,opacity:.5});
-  // Dapur
-  bx(18,.5,16,7,1.2,2,0xFFCCBC);
-  bx(18,1.1,16,6.5,.1,1.5,0xBDBDBD);
-  bx(30,.5,16,6,.85,3.5,0x795548);
-  bx(36,.5,20,3,1.2,5,0xFFCCBC);
-  // Plants
-  const addPlant=(x,z)=>{bx(x,.5,z,.3,1,.3,0x795548);bx(x,1.3,z,1.6,1.6,1.6,0x2E7D32);};
-  addPlant(-24,11);addPlant(22,-15);addPlant(-6,11.5);
+  bx(18,.5,16,7,1.2,2,0xFFCCBC);bx(18,1.1,16,6.5,.1,1.5,0xBDBDBD);
+  bx(30,.5,16,6,.85,3.5,0x795548);bx(36,.5,20,3,1.2,5,0xFFCCBC);
+  const ap=(x,z)=>{bx(x,.5,z,.3,1,.3,0x795548);bx(x,1.3,z,1.6,1.6,1.6,0x2E7D32);};
+  ap(-24,11);ap(22,-15);ap(-6,11.5);
 }
 
-// ——— DOOR OBJECTS ———
-const DCOLS=[0xFF5722,0x9C27B0,0x2196F3,0xFF9800,0x4CAF50,0xF44336,0x00BCD4,0xFF4081,0x8BC34A,0xFFC107];
-const doorObjs={};
+// ── Doors ──
+const DC=[0xFF5722,0x9C27B0,0x2196F3,0xFF9800,0x4CAF50,0xF44336,0x00BCD4,0xFF4081,0x8BC34A,0xFFC107];
+const DOBJS={};
 function buildDoors(){
   DDEFS.forEach((d,i)=>{
     let mx,mz,mw,md;
-    if(d.wallDir==='NS'){mw=d.xE-d.xS;md=WALL_T+.3;mx=(d.xS+d.xE)/2;mz=d.z;}
-    else{mw=WALL_T+.3;md=d.zE-d.zS;mx=d.x;mz=(d.zS+d.zE)/2;}
-    // Own material per door for independent opacity animation
-    const mat=new THREE.MeshLambertMaterial({color:DCOLS[i%DCOLS.length],transparent:true,opacity:.88});
-    const dm=new THREE.Mesh(new THREE.BoxGeometry(mw,DOOR_H,md),mat);
-    dm.position.set(mx,DOOR_H/2,mz);scene.add(dm);
-    // Label canvas
+    if(d.wd==='NS'){mw=d.xE-d.xS;md=WT+.3;mx=(d.xS+d.xE)/2;mz=d.z;}
+    else{mw=WT+.3;md=d.zE-d.zS;mx=d.x;mz=(d.zS+d.zE)/2;}
+    // Each door has its OWN material for independent opacity
+    const mat=new THREE.MeshLambertMaterial({color:DC[i%DC.length],transparent:true,opacity:.88});
+    const dm=new THREE.Mesh(new THREE.BoxGeometry(mw,DH,md),mat);
+    dm.position.set(mx,DH/2,mz);scene.add(dm);
+    // Label
     const cv=document.createElement('canvas');cv.width=128;cv.height=48;
     const c=cv.getContext('2d');
     c.fillStyle='rgba(0,0,0,.78)';c.roundRect(0,4,128,40,8);c.fill();
@@ -689,35 +602,35 @@ function buildDoors(){
     c.fillText('🔐 Pintu '+(i+1),64,24);
     const lbl=new THREE.Mesh(new THREE.PlaneGeometry(1.6,.6),
       new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
-    lbl.position.set(mx,DOOR_H+.5,mz);lbl.renderOrder=10;scene.add(lbl);
-    const qs=[...QP].sort(()=>Math.random()-.5).slice(0,3);
-    doorObjs[d.id]={mat,mesh:dm,lbl,def:d,locked:true,qs,qi:0,opening:false};
+    lbl.position.set(mx,DH+.5,mz);lbl.renderOrder=10;scene.add(lbl);
+    DOBJS[d.id]={mat,mesh:dm,lbl,def:d,locked:true,qs:[...QP].sort(()=>Math.random()-.5).slice(0,3),qi:0,opening:false};
   });
 }
 
-// ——— COINS ———
-const coins=[];
+// ── Coins ──
+const COINS=[];
 function spawnCoins(){
   const dist={living:13,kKakak:5,rTV:5,kKiri:5,kKanan:5,kMandi:5,dapur:7};
-  for(const [rid,cnt] of Object.entries(dist)){
+  for(const[rid,cnt] of Object.entries(dist)){
     const rm=ROOMS.find(r=>r.id===rid);
     for(let i=0;i<cnt;i++){
       let cx,cz,tries=0;
       do{cx=rm.x0+2+Math.random()*(rm.x1-rm.x0-4);cz=rm.z0+2+Math.random()*(rm.z1-rm.z0-4);tries++;}
-      while(tries<30&&coins.some(c=>Math.hypot(c.x-cx,c.z-cz)<1.8));
+      while(tries<30&&COINS.some(c=>Math.hypot(c.x-cx,c.z-cz)<1.8));
       const cg=new THREE.Group();
+      // Use .rotation.x directly — NOT Object.assign (Three.js Vector3/Euler bug)
       const ring=new THREE.Mesh(new THREE.TorusGeometry(.3,.09,6,14),lm(0xFFD700));
       ring.rotation.x=Math.PI/2;
       cg.add(ring);
       cg.position.set(cx,.9,cz);
       cg.userData.ph=Math.random()*Math.PI*2;
       scene.add(cg);
-      coins.push({g:cg,x:cx,z:cz,col:false,ph:cg.userData.ph});
+      COINS.push({g:cg,x:cx,z:cz,col:false,ph:cg.userData.ph});
     }
   }
 }
 
-// ——— ROBLOX CHARACTER ———
+// ── Character builder ──
 function mkFace(glasses){
   const cv=document.createElement('canvas');cv.width=64;cv.height=64;
   const c=cv.getContext('2d');
@@ -735,13 +648,7 @@ function mkFace(glasses){
   }
   return new THREE.CanvasTexture(cv);
 }
-function mkNumTex(n){
-  const cv=document.createElement('canvas');cv.width=32;cv.height=32;
-  const c=cv.getContext('2d');
-  c.font='bold 22px Arial';c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
-  c.fillText(n,16,16);return new THREE.CanvasTexture(cv);
-}
-function mkNameTex(n){
+function mkNT(n){
   const cv=document.createElement('canvas');cv.width=256;cv.height=64;
   const c=cv.getContext('2d');
   c.fillStyle='rgba(0,0,0,.68)';c.roundRect(4,8,248,48,10);c.fill();
@@ -753,11 +660,13 @@ function mkNameTex(n){
 function mkChar(cfg){
   const g=new THREE.Group();
   const{skin,hair,shirt,pants,jerseyNum,name,glasses,bald,femHair,stripe}=cfg;
+
+  // Head with face texture on front (+Z face = index 4)
   const fm=[lm(skin),lm(skin),lm(skin),lm(skin),
     new THREE.MeshLambertMaterial({map:mkFace(glasses)}),lm(skin)];
-  // Head
   const head=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2),fm);
   head.position.set(0,3.2,0);g.add(head);
+
   // Hair
   if(!bald&&hair!=null){
     const hm=new THREE.Mesh(new THREE.BoxGeometry(1.25,.55,1.25),lm(hair));
@@ -767,9 +676,11 @@ function mkChar(cfg){
       br.position.set(0,2.8,-.55);g.add(br);
     }
   }
+
   // Neck
   const nk=new THREE.Mesh(new THREE.BoxGeometry(.5,.38,.5),lm(skin));
   nk.position.set(0,2.62,0);g.add(nk);
+
   // Torso
   const torso=new THREE.Mesh(new THREE.BoxGeometry(1.1,1.4,.65),lm(shirt));
   torso.position.set(0,1.8,0);g.add(torso);
@@ -779,104 +690,141 @@ function mkChar(cfg){
   }
   if(jerseyNum){
     const nm=new THREE.Mesh(new THREE.PlaneGeometry(.42,.42),
-      new THREE.MeshLambertMaterial({map:mkNumTex(jerseyNum),transparent:true}));
+      new THREE.MeshLambertMaterial({
+        map:(()=>{const cv=document.createElement('canvas');cv.width=32;cv.height=32;
+          const c=cv.getContext('2d');c.font='bold 22px Arial';c.fillStyle='#fff';
+          c.textAlign='center';c.textBaseline='middle';c.fillText(jerseyNum,16,16);
+          return new THREE.CanvasTexture(cv);})(),transparent:true}));
     nm.position.set(0,1.8,.34);g.add(nm);
   }
-  // Arms — use .position.set() not Object.assign (Three.js Vector3 can't be plain-object-assigned)
+
+  // ── Arms — use .position.set() NOT Object.assign ──
   const aL=new THREE.Group();aL.position.set(-.85,2.2,0);
-  const aLu=new THREE.Mesh(new THREE.BoxGeometry(.42,1,.42),lm(shirt));aLu.position.set(0,-.5,0);aL.add(aLu);
-  const aLl=new THREE.Mesh(new THREE.BoxGeometry(.38,.9,.38),lm(skin));aLl.position.set(0,-1.38,0);aL.add(aLl);
+  const aLu=new THREE.Mesh(new THREE.BoxGeometry(.42,1,.42),lm(shirt));
+  aLu.position.set(0,-.5,0);aL.add(aLu);
+  const aLl=new THREE.Mesh(new THREE.BoxGeometry(.38,.9,.38),lm(skin));
+  aLl.position.set(0,-1.38,0);aL.add(aLl);
   g.add(aL);
+
   const aR=new THREE.Group();aR.position.set(.85,2.2,0);
-  const aRu=new THREE.Mesh(new THREE.BoxGeometry(.42,1,.42),lm(shirt));aRu.position.set(0,-.5,0);aR.add(aRu);
-  const aRl=new THREE.Mesh(new THREE.BoxGeometry(.38,.9,.38),lm(skin));aRl.position.set(0,-1.38,0);aR.add(aRl);
+  const aRu=new THREE.Mesh(new THREE.BoxGeometry(.42,1,.42),lm(shirt));
+  aRu.position.set(0,-.5,0);aR.add(aRu);
+  const aRl=new THREE.Mesh(new THREE.BoxGeometry(.38,.9,.38),lm(skin));
+  aRl.position.set(0,-1.38,0);aR.add(aRl);
   g.add(aR);
-  // Legs
+
+  // ── Legs — same fix ──
   const lL=new THREE.Group();lL.position.set(-.33,1.1,0);
-  const lLu=new THREE.Mesh(new THREE.BoxGeometry(.44,1,.44),lm(pants));lLu.position.set(0,-.5,0);lL.add(lLu);
-  const lLl=new THREE.Mesh(new THREE.BoxGeometry(.4,.9,.4),lm(0x1A1A1A));lLl.position.set(0,-1.38,0);lL.add(lLl);
+  const lLu=new THREE.Mesh(new THREE.BoxGeometry(.44,1,.44),lm(pants));
+  lLu.position.set(0,-.5,0);lL.add(lLu);
+  const lLl=new THREE.Mesh(new THREE.BoxGeometry(.4,.9,.4),lm(0x1A1A1A));
+  lLl.position.set(0,-1.38,0);lL.add(lLl);
   g.add(lL);
+
   const lR=new THREE.Group();lR.position.set(.33,1.1,0);
-  const lRu=new THREE.Mesh(new THREE.BoxGeometry(.44,1,.44),lm(pants));lRu.position.set(0,-.5,0);lR.add(lRu);
-  const lRl=new THREE.Mesh(new THREE.BoxGeometry(.4,.9,.4),lm(0x1A1A1A));lRl.position.set(0,-1.38,0);lR.add(lRl);
+  const lRu=new THREE.Mesh(new THREE.BoxGeometry(.44,1,.44),lm(pants));
+  lRu.position.set(0,-.5,0);lR.add(lRu);
+  const lRl=new THREE.Mesh(new THREE.BoxGeometry(.4,.9,.4),lm(0x1A1A1A));
+  lRl.position.set(0,-1.38,0);lR.add(lRl);
   g.add(lR);
+
   // Name tag
   if(name){
     const ntg=new THREE.Mesh(new THREE.PlaneGeometry(2.2,.55),
-      new THREE.MeshBasicMaterial({map:mkNameTex(name),transparent:true,depthTest:false}));
+      new THREE.MeshBasicMaterial({map:mkNT(name),transparent:true,depthTest:false}));
     ntg.position.set(0,4.6,0);ntg.renderOrder=10;g.add(ntg);
   }
-  return {group:g,aL,aR,lL,lR,wt:0};
+
+  return{group:g,aL,aR,lL,lR,wt:0};
 }
 
-// ——— GAME STATE ———
+// ── Game state ──
 let gst='SELECT';
-let selId=null,selCfg=null,npcCfg=null;
-let cam3rd=true;
+let selId=null,sCfg=null,nCfg=null;
+let cam3=true;
 let yaw=Math.PI;
-let coinCount=0,lvl=1;
+let coinN=0,lvl=1;
 let lv2qi=0,lv2sc=0,lv2ti=0;
 let lv3qs=[],lv3qi=0,lv3sc=0;
-let chJersey=null,chLego=null;
+let chJ=null,chL=null;
 let npcCD=0;
-let nearDoor=null;
-const pPos=new THREE.Vector3(4,0,2);
+let nearD=null;
+const PP=new THREE.Vector3(4,0,2);
 
 let pChr=null;
-const NPCList=[];
+const NPCS=[];
 
-const CCFG={
+const CFGS={
   suar:{skin:0xFFCC80,hair:0x4E342E,shirt:0xC62828,stripe:0xFFFFFF,pants:0x1565C0,jerseyNum:7},
   pijar:{skin:0xFFCC80,hair:0x212121,shirt:0x1565C0,stripe:0xFDD835,pants:0xC62828,jerseyNum:10},
 };
 const NDEFS=[
-  {id:'akang',name:'Akang 🧑', skin:0xD2906C,bald:true,hair:null,shirt:0x212121,stripe:0x212121,pants:0x212121,room:'living',sx:13,sz:-8},
-  {id:'ibu',  name:'Ibu 👩',   skin:0xFFCC80,hair:0x212121,glasses:true,shirt:0xE91E63,stripe:0xE91E63,pants:0x880E4F,room:'living',sx:5,sz:-12},
+  {id:'akang',name:'Akang 🧑',skin:0xD2906C,bald:true,hair:null,shirt:0x212121,stripe:0x212121,pants:0x212121,room:'living',sx:13,sz:-8},
+  {id:'ibu',  name:'Ibu 👩',  skin:0xFFCC80,hair:0x212121,glasses:true,shirt:0xE91E63,stripe:0xE91E63,pants:0x880E4F,room:'living',sx:5,sz:-12},
   {id:'binar',name:'Kak Binar 👧',skin:0xFFCC80,hair:0x4E342E,femHair:true,shirt:0x1565C0,stripe:0xFFFFFF,pants:0x37474F,room:'kKakak',sx:-18,sz:-19},
 ];
 
+// NPC messages
+const IBU=[
+  'Aduh! Kamu bikin Ibu jatuh! Lihat-lihat dong kalau jalan! 😤',
+  'Ih! Berlari di dalam rumah itu bahaya tau! Ibu kesal banget! 😠',
+  'Hei! Jangan ganggu Ibu yang lagi masak! Berisik sekali! 😡',
+  'Kamu lagi ngapain sih? Bikin Ibu pusing kepala nih! 😤',
+  'Astaga! Berapa kali Ibu bilang, hati-hati kalau jalan! 😠',
+  'Ibu lagi capek dan kamu masih bikin ribut! Hmmph! 😡',
+];
+const AKG=[
+  'Hei! Akang lihat kamu semangat banget! Ayo terus, jangan menyerah! 💪',
+  'Wah wah! Ada jagoan cilik lewat! Pasti bisa kumpulkan semua koin! 🌟',
+  'Akang percaya sama kamu! Terus berjuang, pasti bisa! 😎',
+  'Kamu keren banget! Akang bangga lihat semangatmu! 🔥',
+  'Yuk! Jangan kasih kendor! Akang selalu ada buat support! 💯',
+  'Mantap! Kalau capek istirahat dulu, tapi jangan lama-lama ya! 😄',
+];
+
+// Char select (prevent double-trigger ontouchstart+onclick)
+let selDone=false;
 function selectChar(id){
-  if(gst!=='SELECT')return;
-  // prevent double trigger from ontouchstart + onclick
-  selId=id; selCfg=CCFG[id];
-  npcCfg=CCFG[id==='suar'?'pijar':'suar'];
-  document.getElementById('ov-char').style.display='none';
+  if(selDone)return;selDone=true;
+  selId=id;sCfg=CFGS[id];nCfg=CFGS[id==='suar'?'pijar':'suar'];
+  document.getElementById('ovchar').classList.remove('show');
   initGame();
 }
+document.getElementById('btn-suar').addEventListener('touchend',e=>{e.preventDefault();selectChar('suar');});
+document.getElementById('btn-pijar').addEventListener('touchend',e=>{e.preventDefault();selectChar('pijar');});
+document.getElementById('btn-suar').addEventListener('click',()=>selectChar('suar'));
+document.getElementById('btn-pijar').addEventListener('click',()=>selectChar('pijar'));
 
 function initGame(){
-  buildHouse();
-  buildDoors();
-  // Player
-  pChr=mkChar({...selCfg,name:selId==='suar'?'Suar':'Pijar'});
-  pChr.group.position.copy(pPos);
-  scene.add(pChr.group);
-  // NPC of unchosen char
-  const nc=mkChar({...npcCfg,name:selId==='suar'?'Pijar':'Suar'});
+  buildHouse();buildDoors();
+  pChr=mkChar({...sCfg,name:selId==='suar'?'Suar':'Pijar'});
+  pChr.group.position.copy(PP);scene.add(pChr.group);
+  // NPC of unchosen char (in Ruang TV)
+  const nc=mkChar({...nCfg,name:selId==='suar'?'Pijar':'Suar'});
   nc.group.position.set(-18,0,0);scene.add(nc.group);
-  NPCList.push({obj:nc.group,chr:nc,room:'rTV',tgt:new THREE.Vector3(-18,0,0),wait:80});
+  NPCS.push({obj:nc.group,chr:nc,room:'rTV',tgt:new THREE.Vector3(-18,0,0),wait:80});
   // Game NPCs
   for(const nd of NDEFS){
     const nc2=mkChar({...nd});
     nc2.group.position.set(nd.sx,0,nd.sz);scene.add(nc2.group);
-    NPCList.push({obj:nc2.group,chr:nc2,id:nd.id,cfg:nd,room:nd.room,tgt:new THREE.Vector3(nd.sx,0,nd.sz),wait:rnd(40,120)});
+    NPCS.push({obj:nc2.group,chr:nc2,id:nd.id,cfg:nd,room:nd.room,tgt:new THREE.Vector3(nd.sx,0,nd.sz),wait:rnd(40,120)});
   }
   spawnCoins();
   document.getElementById('hud').style.display='flex';
-  document.getElementById('m-ctrl').style.display='block';
+  document.getElementById('ctrl').style.display='block';
   updateHUD();
   gst='PLAYING';
 }
 
-// ——— WALKABLE ———
+// ── Walkable / blocked ──
 function walkable(px,pz){
   const r=.45;
   for(const rm of ROOMS)
     if(px>rm.x0+r&&px<rm.x1-r&&pz>rm.z0+r&&pz<rm.z1-r)return true;
-  for(const dobj of Object.values(doorObjs)){
+  for(const dobj of Object.values(DOBJS)){
     if(!dobj.locked||dobj.opening){
       const d=dobj.def;
-      if(d.wallDir==='NS'){if(Math.abs(pz-d.z)<1.2&&px>d.xS-r&&px<d.xE+r)return true;}
+      if(d.wd==='NS'){if(Math.abs(pz-d.z)<1.2&&px>d.xS-r&&px<d.xE+r)return true;}
       else{if(Math.abs(px-d.x)<1.2&&pz>d.zS-r&&pz<d.zE+r)return true;}
     }
   }
@@ -884,46 +832,54 @@ function walkable(px,pz){
 }
 function blocked(px,pz){
   const r=.5;
-  for(const dobj of Object.values(doorObjs)){
+  for(const dobj of Object.values(DOBJS)){
     if(!dobj.locked||dobj.opening)continue;
     const d=dobj.def;
-    if(d.wallDir==='NS'){if(Math.abs(pz-d.z)<r+WALL_T*.8&&px>d.xS-r&&px<d.xE+r)return true;}
-    else{if(Math.abs(px-d.x)<r+WALL_T*.8&&pz>d.zS-r&&pz<d.zE+r)return true;}
+    if(d.wd==='NS'){if(Math.abs(pz-d.z)<r+WT*.8&&px>d.xS-r&&px<d.xE+r)return true;}
+    else{if(Math.abs(px-d.x)<r+WT*.8&&pz>d.zS-r&&pz<d.zE+r)return true;}
   }
   return false;
 }
 
-// ——— PLAYER UPDATE ———
-let wkT=0;
-const keys={};
+// ── Player update ──
+const keys={};let wkT=0;
 function updatePlayer(){
   if(gst!=='PLAYING')return;
   let dx=0,dz=0;
   // Keyboard
   if(keys['ArrowLeft']||keys['q']||keys['Q'])yaw+=.06;
   if(keys['ArrowRight']||keys['e']||keys['E'])yaw-=.06;
-  if(keys['ArrowUp']||keys['w']||keys['W']){dx-=Math.sin(yaw)*PSPD;dz-=Math.cos(yaw)*PSPD;}
-  if(keys['ArrowDown']||keys['s']||keys['S']){dx+=Math.sin(yaw)*PSPD;dz+=Math.cos(yaw)*PSPD;}
-  if(keys['a']||keys['A']){dx-=Math.cos(yaw)*PSPD*.7;dz+=Math.sin(yaw)*PSPD*.7;}
-  if(keys['d']||keys['D']){dx+=Math.cos(yaw)*PSPD*.7;dz-=Math.sin(yaw)*PSPD*.7;}
-  // Joystick (already in world-relative coords after transform)
+  if(keys['ArrowUp']||keys['w']||keys['W'])  {dx-=Math.sin(yaw)*PSP;dz-=Math.cos(yaw)*PSP;}
+  if(keys['ArrowDown']||keys['s']||keys['S']){dx+=Math.sin(yaw)*PSP;dz+=Math.cos(yaw)*PSP;}
+  if(keys['a']||keys['A'])  {dx+=Math.cos(yaw)*PSP*.7;dz-=Math.sin(yaw)*PSP*.7;}
+  if(keys['d']||keys['D'])  {dx-=Math.cos(yaw)*PSP*.7;dz+=Math.sin(yaw)*PSP*.7;}
+
+  // ── JOYSTICK — corrected direction math ──
+  // Forward direction vector: (-sin(yaw), 0, -cos(yaw))
+  // Right   direction vector: ( cos(yaw), 0, -sin(yaw))
+  // jDy < 0 = finger up   = forward
+  // jDy > 0 = finger down  = backward
+  // jDx < 0 = finger left  = strafe left
+  // jDx > 0 = finger right = strafe right
   if(jAct){
-    dx+=-(Math.sin(yaw)*jDy+Math.cos(yaw)*jDx)*PSPD;
-    dz+=-(Math.cos(yaw)*jDy-Math.sin(yaw)*jDx)*PSPD;
+    // Forward/backward from jDy (invert sign because screen-Y is inverted)
+    dx += Math.sin(yaw) * jDy * PSP;
+    dz += Math.cos(yaw) * jDy * PSP;
+    // Strafe left/right from jDx
+    dx += Math.cos(yaw) * jDx * PSP;
+    dz -= Math.sin(yaw) * jDx * PSP;
   }
+
   const mv=Math.abs(dx)>.0005||Math.abs(dz)>.0005;
-  const nx=pPos.x+dx,nz=pPos.z+dz;
+  const nx=PP.x+dx,nz=PP.z+dz;
   if(!blocked(nx,nz)){
-    if(walkable(nx,pPos.z))pPos.x=nx;
-    if(walkable(pPos.x,nz))pPos.z=nz;
+    if(walkable(nx,PP.z))PP.x=nx;
+    if(walkable(PP.x,nz))PP.z=nz;
   }
-  pChr.group.position.set(pPos.x,0,pPos.z);
-  // +PI so camera sees back of character
-  pChr.group.rotation.y=yaw+Math.PI;
-  // Walk animation
+  pChr.group.position.set(PP.x,0,PP.z);
+  pChr.group.rotation.y=yaw+Math.PI; // +PI = camera sees character's back
   if(mv){
-    wkT++;
-    const a=Math.sin(wkT*.28)*.52;
+    wkT++;const a=Math.sin(wkT*.28)*.52;
     pChr.lL.rotation.x=a;pChr.lR.rotation.x=-a;
     pChr.aL.rotation.x=-a*.75;pChr.aR.rotation.x=a*.75;
   } else {
@@ -934,22 +890,22 @@ function updatePlayer(){
   checkDoors();
 }
 
-// ——— CAMERA ———
-function toggleCamera(){
-  cam3rd=!cam3rd;
-  document.getElementById('hud-cam').textContent=cam3rd?'📷 3rd':'📷 1st';
+// ── Camera ──
+function toggleCam(){
+  cam3=!cam3;
+  document.getElementById('hcam').textContent=cam3?'📷':'👁️';
 }
-const _cV=new THREE.Vector3(),_cL=new THREE.Vector3();
+const _cv=new THREE.Vector3(),_cl=new THREE.Vector3();
 function updateCam(){
-  if(cam3rd){
-    // Camera BEHIND player
-    _cV.set(pPos.x+Math.sin(yaw)*6.5, 5, pPos.z+Math.cos(yaw)*6.5);
-    camera.position.lerp(_cV,.14);
-    _cL.set(pPos.x,2.5,pPos.z);
-    camera.lookAt(_cL);
+  if(cam3){
+    // Camera behind player
+    _cv.set(PP.x+Math.sin(yaw)*6.5,5.2,PP.z+Math.cos(yaw)*6.5);
+    camera.position.lerp(_cv,.13);
+    _cl.set(PP.x,2.2,PP.z);
+    camera.lookAt(_cl);
     if(pChr)pChr.group.visible=true;
   } else {
-    camera.position.set(pPos.x,3.3,pPos.z);
+    camera.position.set(PP.x,3.2,PP.z);
     camera.rotation.set(0,yaw+Math.PI,0);
     if(pChr)pChr.group.visible=false;
   }
@@ -957,102 +913,95 @@ function updateCam(){
   scene.traverse(o=>{if(o.isMesh&&o.renderOrder===10)o.lookAt(camera.position);});
 }
 
-// ——— COINS ———
+// ── Coins ──
 let tick=0;
 function collectCoins(){
-  for(const c of coins){
+  for(const c of COINS){
     if(c.col)continue;
-    if(Math.hypot(pPos.x-c.x,pPos.z-c.z)<1.1){
+    if(Math.hypot(PP.x-c.x,PP.z-c.z)<1.1){
       c.col=true;scene.remove(c.g);
-      coinCount++;updateHUD();
-      if(coinCount>=COIN_TOTAL)setTimeout(showLv1Win,300);
+      coinN++;updateHUD();
+      if(coinN>=CTOTAL)setTimeout(showLv1Win,300);
     }
   }
 }
 function animCoins(){
   tick+=.04;
-  for(const c of coins){
+  for(const c of COINS){
     if(!c.col){c.g.position.y=.85+Math.sin(tick+c.ph)*.2;c.g.rotation.y+=.06;}
   }
 }
 
-// ——— DOORS ———
+// ── Doors ──
 function checkDoors(){
-  nearDoor=null;let bd=3.8;
-  for(const[,dobj] of Object.entries(doorObjs)){
+  nearD=null;let bd=3.8;
+  for(const[,dobj] of Object.entries(DOBJS)){
     if(!dobj.locked||dobj.opening)continue;
     const d=dobj.def;
-    const dx=pPos.x-(d.wallDir==='NS'?(d.xS+d.xE)/2:d.x);
-    const dz=pPos.z-(d.wallDir==='NS'?d.z:(d.zS+d.zE)/2);
+    const dx=PP.x-(d.wd==='NS'?(d.xS+d.xE)/2:d.x);
+    const dz=PP.z-(d.wd==='NS'?d.z:(d.zS+d.zE)/2);
     const dist=Math.sqrt(dx*dx+dz*dz);
     dobj.mat.opacity=dist<4?.62+.3*Math.sin(tick*6):.88;
-    if(dist<bd){bd=dist;nearDoor={dobj};}
+    if(dist<bd){bd=dist;nearD={dobj};}
   }
-  const hint=document.getElementById('door-hint');
-  const btn=document.getElementById('btn-door');
-  if(nearDoor){
-    hint.style.display='block';
-    btn.classList.add('near');
-  } else {
-    hint.style.display='none';
-    btn.classList.remove('near');
-  }
+  const h=document.getElementById('dhint');
+  const b=document.getElementById('abtn-door');
+  if(nearD){h.style.display='block';b.classList.add('near');}
+  else{h.style.display='none';b.classList.remove('near');}
 }
 
 function interactDoor(){
-  if(nearDoor&&gst==='PLAYING'){startQ(nearDoor.dobj);nearDoor=null;}
+  if(nearD&&gst==='PLAYING'){startQ(nearD.dobj);nearD=null;}
 }
 
-// ——— QUESTION SYSTEM ———
-let activeD=null,qBusy=false;
+// ── Question system ──
+let qBusy=false,activeQD=null;
 function startQ(dobj){
   if(qBusy)return;
-  qBusy=true;gst='Q';activeD=dobj;dobj.qi=0;
-  showQ(dobj);
+  qBusy=true;gst='Q';activeQD=dobj;dobj.qi=0;showQ(dobj);
 }
 function showQ(dobj){
-  const ov=document.getElementById('ov-q');ov.style.display='flex';
+  const ov=document.getElementById('ovq');ov.classList.add('show');
   const q=dobj.qs[dobj.qi];
-  document.getElementById('q-lbl').textContent=`🔐 Pertanyaan ${dobj.qi+1} / 3`;
-  document.getElementById('q-subj').textContent=q.s;
-  document.getElementById('q-txt').textContent=q.q;
-  // progress
-  const pg=document.getElementById('q-prog');pg.innerHTML='';
+  document.getElementById('qlbl').textContent=`🔐 Pertanyaan ${dobj.qi+1} / 3`;
+  document.getElementById('qsubj').textContent=q.s;
+  document.getElementById('qtxt').textContent=q.q;
+  const pg=document.getElementById('qprog');pg.innerHTML='';
   for(let i=0;i<3;i++){
     const d=document.createElement('div');
-    d.className='q-dot'+(i<dobj.qi?' done':i===dobj.qi?' act':'');
+    d.className='qdot'+(i<dobj.qi?' done':i===dobj.qi?' act':'');
     d.textContent=i<dobj.qi?'✓':i+1;pg.appendChild(d);
   }
-  // options
-  const op=document.getElementById('q-opts');op.innerHTML='';
+  const op=document.getElementById('qopts');op.innerHTML='';
   q.o.forEach((o,i)=>{
-    const b=document.createElement('button');b.className='q-btn';b.textContent=o;
-    b.ontouchend=b.onclick=()=>{
-      op.querySelectorAll('.q-btn').forEach(x=>{x.onclick=null;x.ontouchend=null;});
+    const b=document.createElement('button');b.className='qbtn';b.textContent=o;
+    const handler=()=>{
+      op.querySelectorAll('.qbtn').forEach(x=>{x.removeEventListener('touchend',x._h);x.removeEventListener('click',x._h);});
       const ok=i===q.a;
       b.classList.add(ok?'ok':'no');
-      if(!ok)op.querySelectorAll('.q-btn')[q.a].classList.add('ok');
-      document.getElementById('q-fb').textContent=ok?'✅ Benar! Hebat!':'❌ Kurang tepat, semangat!';
-      document.getElementById('q-fb').style.color=ok?'#4CAF50':'#F44336';
+      if(!ok)op.querySelectorAll('.qbtn')[q.a].classList.add('ok');
+      document.getElementById('qfb').textContent=ok?'✅ Benar! Hebat!':'❌ Kurang tepat, semangat!';
+      document.getElementById('qfb').style.color=ok?'#4CAF50':'#F44336';
       dobj.qi++;
       setTimeout(()=>{
         if(dobj.qi>=3){
-          document.getElementById('ov-q').style.display='none';
+          document.getElementById('ovq').classList.remove('show');
           qBusy=false;gst='PLAYING';openDoor(dobj);
         } else showQ(dobj);
       },950);
     };
+    b._h=handler;
+    b.addEventListener('touchend',e=>{e.preventDefault();handler();},{once:true,passive:false});
+    b.addEventListener('click',handler,{once:true});
     op.appendChild(b);
   });
-  document.getElementById('q-fb').textContent='';
+  document.getElementById('qfb').textContent='';
 }
-function openDoor(dobj){
-  dobj.locked=false;dobj.opening=true;
-}
+function openDoor(dobj){dobj.locked=false;dobj.opening=true;}
 
-// ——— NPC UPDATE ———
+// ── NPCs ──
 function updateNPCs(){
-  for(const npc of NPCList){
+  for(const npc of NPCS){
     if(npc.wait>0){npc.wait--;continue;}
     const p=npc.obj.position;
     const tx=npc.tgt.x-p.x,tz=npc.tgt.z-p.z;
@@ -1062,7 +1011,7 @@ function updateNPCs(){
       if(rm)npc.tgt.set(rm.x0+2+Math.random()*(rm.x1-rm.x0-4),0,rm.z0+2+Math.random()*(rm.z1-rm.z0-4));
       npc.wait=rnd(60,180);continue;
     }
-    const nx=p.x+tx/dist*NSPD,nz=p.z+tz/dist*NSPD;
+    const nx=p.x+tx/dist*NSP,nz=p.z+tz/dist*NSP;
     if(walkable(nx,nz)){p.x=nx;p.z=nz;}
     npc.obj.rotation.y=Math.atan2(tx,tz);
     npc.chr.wt++;
@@ -1072,262 +1021,213 @@ function updateNPCs(){
   }
 }
 
-// ——— NPC DIALOG ———
-const IBU_MSG=[
-  'Aduh! Kamu bikin Ibu jatuh! Lihat-lihat dong kalau jalan! 😤',
-  'Ih! Berlari di dalam rumah itu bahaya tau! Ibu kesal banget! 😠',
-  'Hei! Jangan ganggu Ibu yang lagi masak! Berisik sekali! 😡',
-  'Kamu lagi ngapain sih? Bikin Ibu pusing kepala nih! 😤',
-  'Astaga! Berapa kali Ibu bilang, hati-hati kalau jalan! 😠',
-  'Ibu lagi capek dan kamu masih bikin ribut! Hmmph! 😡',
-];
-const AKANG_MSG=[
-  'Hei! Akang lihat kamu semangat banget! Ayo terus, jangan menyerah! 💪',
-  'Wah wah! Ada jagoan cilik lewat! Pasti bisa kumpulkan semua koin! 🌟',
-  'Akang percaya sama kamu! Terus berjuang, hasilnya pasti worth it! 😎',
-  'Kamu keren banget tadi! Akang bangga lihat semangatmu! 🔥',
-  'Yuk! Jangan kasih kendor! Akang selalu ada buat support! 💯',
-  'Mantaaap! Kalau capek istirahat dulu, tapi jangan lama-lama ya! 😄',
-];
-
 function checkNPCInteract(){
   if(gst!=='PLAYING'||npcCD>0)return;
-  for(const npc of NPCList){
+  for(const npc of NPCS){
     if(!npc.cfg)continue;
-    const dx=pPos.x-npc.obj.position.x,dz=pPos.z-npc.obj.position.z;
+    const dx=PP.x-npc.obj.position.x,dz=PP.z-npc.obj.position.z;
     if(Math.sqrt(dx*dx+dz*dz)<2.4){showNPCDlg(npc.cfg);return;}
   }
 }
 
-function closeDlg(){
-  document.getElementById('npc-dlg').style.display='none';
-  gst='PLAYING';
+function closeDlg(){document.getElementById('ndlg').style.display='none';gst='PLAYING';}
+
+function showCoinFX(n){
+  const h=document.getElementById('dhint');
+  const prev=h.textContent;
+  h.textContent=`+${n} 🪙 Koin didapat!`;
+  h.style.display='block';h.style.background='rgba(255,215,0,.93)';h.style.color='#000';
+  setTimeout(()=>{h.style.display='none';h.style.background='rgba(255,193,7,.93)';h.textContent='🔐 Tap tombol 🚪 untuk buka pintu!';},2000);
 }
 
 function addCoins(n){
-  coinCount=Math.min(coinCount+n,COIN_TOTAL);
-  updateHUD();
-  // popup feedback
-  const h=document.getElementById('door-hint');
-  const prev=h.textContent;
-  h.textContent=`+${n} 🪙 Koin didapat!`;
-  h.style.display='block';
-  h.style.background='rgba(255,215,0,.92)';
-  h.style.color='#000';
-  setTimeout(()=>{
-    h.style.display='none';
-    h.style.background='rgba(255,193,7,.92)';
-    h.textContent='🔐 Tekan tombol 🚪 untuk buka pintu!';
-  },2000);
-  if(coinCount>=COIN_TOTAL)setTimeout(showLv1Win,300);
+  coinN=Math.min(coinN+n,CTOTAL);updateHUD();showCoinFX(n);
+  if(coinN>=CTOTAL)setTimeout(showLv1Win,300);
 }
 
 function showNPCDlg(cfg){
   npcCD=360;gst='NPC';
-  const dlg=document.getElementById('npc-dlg');
-  dlg.style.display='block';
-  const nn=document.getElementById('npc-name');
-  const nt=document.getElementById('npc-text');
-  const nb=document.getElementById('npc-btns');
-  nn.textContent=cfg.name;
-  nb.innerHTML='';
+  const dlg=document.getElementById('ndlg');dlg.style.display='block';
+  const nn=document.getElementById('nname');
+  const nt=document.getElementById('ntext');
+  const nb=document.getElementById('nbtns');
+  nn.textContent=cfg.name;nb.innerHTML='';
+
+  function mkBtn(lbl,col,cb){
+    const b=document.createElement('button');b.className='nbtn';b.textContent=lbl;
+    b.style.background=col;
+    b.addEventListener('touchend',e=>{e.preventDefault();cb();},{once:true,passive:false});
+    b.addEventListener('click',cb,{once:true});
+    return b;
+  }
 
   if(cfg.id==='ibu'){
     nn.style.color='#C62828';
-    nt.textContent=IBU_MSG[rnd(0,IBU_MSG.length-1)];
+    nt.textContent=IBU[rnd(0,IBU.length-1)];
     [
-      {lbl:'😭 Nangis',   col:'#1565C0', after:'Aduh, jangan nangis dong. Ibu kasihan juga sih... Lain kali hati-hati ya.',      rew:0},
-      {lbl:'🙏 Minta Maaf',col:'#2E7D32',after:'Iya sudah Ibu maafkan. Senang kamu mau minta maaf! Ini koin buat kamu ya. 🪙',   rew:3},
-      {lbl:'🏃 Lari!',    col:'#7B1FA2', after:'Hei berhenti! Dasar anak nakal! Awas kalau ketangkap! 😤',                        rew:0},
+      {l:'😭 Nangis',   c:'#1565C0',reply:'Aduh, jangan nangis dong. Ibu kasihan juga sih... Lain kali hati-hati ya.',       rew:0},
+      {l:'🙏 Minta Maaf',c:'#2E7D32',reply:'Iya sudah Ibu maafkan. Senang kamu mau minta maaf! Ini koin buat kamu ya. 🪙',  rew:3},
+      {l:'🏃 Lari!',    c:'#7B1FA2',reply:'Hei berhenti! Dasar anak nakal! Awas kalau ketangkap! 😤',                        rew:0},
     ].forEach(o=>{
-      const b=document.createElement('button');b.className='npc-btn';b.textContent=o.lbl;
-      b.style.background=o.col;b.style.color='#fff';
-      b.ontouchend=b.onclick=(e)=>{
-        e.preventDefault();
-        nb.innerHTML='';nt.textContent=o.after;
-        if(o.rew>0){setTimeout(()=>{addCoins(o.rew);closeDlg();},1300);}
-        else{
-          if(o.lbl.includes('Lari')){pPos.x+=rnd(-4,4);pPos.z+=rnd(-4,4);}
-          setTimeout(closeDlg,1400);
-        }
-      };
-      nb.appendChild(b);
+      nb.appendChild(mkBtn(o.l,o.c,()=>{
+        nb.innerHTML='';nt.textContent=o.reply;
+        if(o.rew){setTimeout(()=>{addCoins(o.rew);closeDlg();},1200);}
+        else{if(o.l.includes('Lari')){PP.x+=rnd(-4,4);PP.z+=rnd(-4,4);}setTimeout(closeDlg,1300);}
+      }));
     });
-
   } else if(cfg.id==='akang'){
     nn.style.color='#37474F';
-    nt.textContent=AKANG_MSG[rnd(0,AKANG_MSG.length-1)]+' Oh ya, boleh minta peluk sebentar? Akang kangen! 🤗';
+    nt.textContent=AKG[rnd(0,AKG.length-1)]+' Oh ya, boleh minta peluk sebentar? Akang kangen! 🤗';
     [
-      {lbl:'🤗 Peluk Akang!',col:'#E65100',after:'Makasih pelukan manisnya! Akang bahagia banget! Ini koin spesial! 🪙🪙',rew:5},
-      {lbl:'❌ Tidak dulu', col:'#546E7A',after:'Oke gapapa. Tetap semangat ya! Akang masih di sini. 👍',              rew:0},
+      {l:'🤗 Peluk Akang!',c:'#E65100',reply:'Makasih pelukan manisnya! Akang bahagia banget! Ini koin spesial! 🪙🪙',rew:5},
+      {l:'❌ Tidak dulu', c:'#546E7A',reply:'Oke gapapa. Tetap semangat ya! Akang masih di sini. 👍',              rew:0},
     ].forEach(o=>{
-      const b=document.createElement('button');b.className='npc-btn';b.textContent=o.lbl;
-      b.style.background=o.col;b.style.color='#fff';
-      b.ontouchend=b.onclick=(e)=>{
-        e.preventDefault();
-        nb.innerHTML='';nt.textContent=o.after;
-        if(o.rew>0){setTimeout(()=>{addCoins(o.rew);closeDlg();},1300);}
-        else{setTimeout(closeDlg,1400);}
-      };
-      nb.appendChild(b);
+      nb.appendChild(mkBtn(o.l,o.c,()=>{
+        nb.innerHTML='';nt.textContent=o.reply;
+        if(o.rew){setTimeout(()=>{addCoins(o.rew);closeDlg();},1200);}
+        else{setTimeout(closeDlg,1300);}
+      }));
     });
-
   } else if(cfg.id==='binar'){
     nn.style.color='#6A1B9A';
-    nt.textContent=[
-      'INI KAMAR KAKAK! Keluar sekarang! Kak Binar lagi ngerjain PR! 😤',
-      'Hei hei hei! Siapa suruh masuk kamar Kakak?! KELUAR! 😠',
-      'USIR! USIR! Kamar ini privat! Pergi sana! 🚫',
-    ][rnd(0,2)];
-    const b=document.createElement('button');b.className='npc-btn';b.textContent='😅 Oke Kak, pergi!';
-    b.style.background='#6A1B9A';b.style.color='#fff';
-    b.ontouchend=b.onclick=(e)=>{e.preventDefault();pPos.set(4,0,2);closeDlg();};
-    nb.appendChild(b);
-
+    nt.textContent=['INI KAMAR KAKAK! Keluar sekarang! Kak Binar lagi ngerjain PR! 😤',
+      'Hei! Siapa suruh masuk kamar Kakak?! KELUAR! 😠',
+      'USIR! USIR! Kamar ini privat! Pergi sana! 🚫'][rnd(0,2)];
+    nb.appendChild(mkBtn('😅 Oke Kak, pergi!','#6A1B9A',()=>{PP.set(4,0,2);closeDlg();}));
   } else {
-    nn.style.color='#4CAF50';
-    nt.textContent='Halo! Selamat bermain! 😊';
-    const b=document.createElement('button');b.className='npc-btn';b.textContent='Halo! 👋';
-    b.style.background='#4CAF50';b.style.color='#fff';
-    b.ontouchend=b.onclick=(e)=>{e.preventDefault();closeDlg();};
-    nb.appendChild(b);
+    nn.style.color='#4CAF50';nt.textContent='Halo! Selamat bermain! 😊';
+    nb.appendChild(mkBtn('Halo! 👋','#4CAF50',closeDlg));
   }
 }
 
-// ——— HUD ———
+// ── HUD ──
 function updateHUD(){
-  document.getElementById('hud-lv').textContent='Level '+lvl;
-  document.getElementById('hud-coins').textContent='🪙 '+coinCount+'/'+COIN_TOTAL;
-  const rm=ROOMS.find(r=>pPos.x>r.x0&&pPos.x<r.x1&&pPos.z>r.z0&&pPos.z<r.z1);
-  document.getElementById('hud-room').textContent=rm?rm.name:'🏠';
-  document.getElementById('hud-cam').textContent=cam3rd?'📷':'👁️';
+  document.getElementById('hlv').textContent='Level '+lvl;
+  document.getElementById('hcoin').textContent='🪙 '+coinN+'/'+CTOTAL;
+  const rm=ROOMS.find(r=>PP.x>r.x0&&PP.x<r.x1&&PP.z>r.z0&&PP.z<r.z1);
+  document.getElementById('hroom').textContent=rm?rm.nm:'🏠';
 }
 
-// ——— LEVEL FLOWS ———
+// ── Level flows ──
 function showLv1Win(){
   gst='LV1WIN';
-  document.getElementById('ov-lv1win').style.display='flex';
-  const gr=document.getElementById('jersey-grid');gr.innerHTML='';
+  document.getElementById('ovlv1').classList.add('show');
+  const gr=document.getElementById('jgrid');gr.innerHTML='';
   JERSEYS.forEach(j=>{
-    const d=document.createElement('div');d.className='rw-item';
+    const d=document.createElement('div');d.className='rwitem';
     d.innerHTML=`<div class="ri" style="color:${j.c}">${j.e}</div><div class="rn">${j.n}</div>`;
-    d.ontouchend=d.onclick=()=>{
-      chJersey=j.n;
-      gr.querySelectorAll('.rw-item').forEach(x=>x.style.borderColor='');
-      d.style.borderColor='#FFD700';
-      document.getElementById('lv1-next').style.display='block';
-    };
+    const choose=()=>{chJ=j.n;gr.querySelectorAll('.rwitem').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');document.getElementById('lv1next').style.display='block';};
+    d.addEventListener('touchend',e=>{e.preventDefault();choose();},{passive:false});
+    d.addEventListener('click',choose);
     gr.appendChild(d);
   });
 }
 function startLv2(){
-  document.getElementById('ov-lv1win').style.display='none';
-  lvl=2;lv2qi=0;lv2sc=0;gst='LV2';showLv2();
+  document.getElementById('ovlv1').classList.remove('show');
+  lvl=2;lv2qi=0;lv2sc=0;gst='LV2';showLv2s();
 }
-function showLv2(){
-  document.getElementById('ov-lv2').style.display='flex';
+function showLv2s(){
+  document.getElementById('ovlv2').classList.add('show');
   lv2ti=rnd(0,3);
-  document.getElementById('lv2-tgt').textContent=LEGO[lv2ti].e;
-  document.getElementById('lv2-q').textContent=`Soal ${lv2qi+1}/3 — Pilih lego: ${LEGO[lv2ti].n}`;
-  const op=document.getElementById('lv2-opts');op.innerHTML='';
+  document.getElementById('lv2tgt').textContent=LEGO[lv2ti].e;
+  document.getElementById('lv2q').textContent=`Soal ${lv2qi+1}/3 — Pilih lego: ${LEGO[lv2ti].n}`;
+  const op=document.getElementById('lv2opts');op.innerHTML='';
   [...LEGO].sort(()=>Math.random()-.5).forEach(opt=>{
-    const d=document.createElement('div');d.className='rw-item';
+    const d=document.createElement('div');d.className='rwitem';
     d.innerHTML=`<div class="ri">${opt.e}</div><div class="rn">${opt.n}</div>`;
-    d.ontouchend=d.onclick=()=>{
-      op.querySelectorAll('.rw-item').forEach(x=>{x.onclick=null;x.ontouchend=null;});
+    const pick=()=>{
+      op.querySelectorAll('.rwitem').forEach(x=>{x.removeEventListener('touchend',x._p);x.removeEventListener('click',x._c);});
       const ok=opt.n===LEGO[lv2ti].n;
-      if(ok){lv2sc++;d.style.borderColor='#4CAF50';d.style.background='rgba(76,175,80,.3)';}
+      if(ok){lv2sc++;d.style.borderColor='#4CAF50';d.style.background='rgba(76,175,80,.3)';chL=opt.n;}
       else{d.style.borderColor='#F44336';d.style.background='rgba(244,67,54,.25)';}
-      if(ok)chLego=opt.n;
-      document.getElementById('lv2-sc').textContent=`Skor: ${lv2sc}/${lv2qi+1}`;
-      setTimeout(()=>{lv2qi++;if(lv2qi>=3){document.getElementById('ov-lv2').style.display='none';startLv3();}else showLv2();},900);
+      document.getElementById('lv2sc').textContent=`Skor: ${lv2sc}/${lv2qi+1}`;
+      setTimeout(()=>{lv2qi++;if(lv2qi>=3){document.getElementById('ovlv2').classList.remove('show');startLv3();}else showLv2s();},900);
     };
+    d._p=e=>{e.preventDefault();pick();};d._c=pick;
+    d.addEventListener('touchend',d._p,{passive:false});d.addEventListener('click',d._c);
     op.appendChild(d);
   });
 }
 function startLv3(){
-  lvl=3;lv3qs=genMath();lv3qi=0;lv3sc=0;gst='LV3';showLv3();
+  lvl=3;lv3qs=genMath();lv3qi=0;lv3sc=0;gst='LV3';showLv3s();
 }
-function showLv3(){
-  document.getElementById('ov-lv3').style.display='flex';
+function showLv3s(){
+  document.getElementById('ovlv3').classList.add('show');
   const q=lv3qs[lv3qi];
-  const pg=document.getElementById('lv3-prog');pg.innerHTML='';
+  const pg=document.getElementById('lv3prog');pg.innerHTML='';
   for(let i=0;i<5;i++){
-    const d=document.createElement('div');
-    d.className='q-dot'+(i<lv3qi?' done':i===lv3qi?' act':'');
+    const d=document.createElement('div');d.className='qdot'+(i<lv3qi?' done':i===lv3qi?' act':'');
     d.textContent=i<lv3qi?'✓':i+1;pg.appendChild(d);
   }
-  document.getElementById('lv3-q').textContent=q.text;
-  const op=document.getElementById('lv3-opts');op.innerHTML='';
+  document.getElementById('lv3q').textContent=q.text;
+  const op=document.getElementById('lv3opts');op.innerHTML='';
   q.opts.forEach(o=>{
-    const b=document.createElement('button');b.className='q-btn';b.textContent=o;
-    b.ontouchend=b.onclick=()=>{
-      op.querySelectorAll('.q-btn').forEach(x=>{x.onclick=null;x.ontouchend=null;});
-      const ok=(o===q.ans);
+    const b=document.createElement('button');b.className='qbtn';b.textContent=o;
+    const handler=()=>{
+      op.querySelectorAll('.qbtn').forEach(x=>{x.removeEventListener('touchend',x._h);x.removeEventListener('click',x._h);});
+      const ok=(String(o)===String(q.ans));
       if(ok){lv3sc++;b.classList.add('ok');}
-      else{
-        b.classList.add('no');
-        op.querySelectorAll('.q-btn').forEach(x=>{
-          if(String(x.textContent)===String(q.ans))x.classList.add('ok');
-        });
-      }
-      document.getElementById('lv3-sc').textContent=`Benar: ${lv3sc}/${lv3qi+1}`;
+      else{b.classList.add('no');op.querySelectorAll('.qbtn').forEach(x=>{if(String(x.textContent)===String(q.ans))x.classList.add('ok');});}
+      document.getElementById('lv3sc').textContent=`Benar: ${lv3sc}/${lv3qi+1}`;
       lv3qi++;
-      setTimeout(()=>{
-        if(lv3qi>=5){document.getElementById('ov-lv3').style.display='none';showWin();}
-        else showLv3();
-      },900);
+      setTimeout(()=>{if(lv3qi>=5){document.getElementById('ovlv3').classList.remove('show');showWin();}else showLv3s();},900);
     };
+    b._h=handler;
+    b.addEventListener('touchend',e=>{e.preventDefault();handler();},{once:true,passive:false});
+    b.addEventListener('click',handler,{once:true});
     op.appendChild(b);
   });
 }
 function showWin(){
-  gst='WIN';
-  document.getElementById('ov-win').style.display='flex';
-  document.getElementById('win-name').textContent=(selId==='suar'?'Suar':'Pijar')+' telah menyelesaikan semua level! 🌟';
-  document.getElementById('win-rewards').innerHTML=`⚽ Jersey: ${chJersey||'?'}<br>🧩 Lego: ${chLego||'?'}<br>📐 Matematika: ${lv3sc}/5 ✓`;
+  gst='WIN';document.getElementById('ovwin').classList.add('show');
+  document.getElementById('wname').textContent=(selId==='suar'?'Suar':'Pijar')+' telah menyelesaikan semua level! 🌟';
+  document.getElementById('wrewards').innerHTML=`⚽ Jersey: ${chJ||'?'}<br>🧩 Lego: ${chL||'?'}<br>📐 Matematika: ${lv3sc}/5 ✓`;
 }
 
-// ——— KEYBOARD ———
+// Button wiring
+document.getElementById('lv1next').addEventListener('touchend',e=>{e.preventDefault();startLv2();},{passive:false});
+document.getElementById('lv1next').addEventListener('click',startLv2);
+document.getElementById('btn-restart').addEventListener('touchend',e=>{e.preventDefault();location.reload();},{passive:false});
+document.getElementById('btn-restart').addEventListener('click',()=>location.reload());
+
+// ── Keyboard ──
 window.addEventListener('keydown',e=>{
   keys[e.key]=true;
-  if(e.key==='c'||e.key==='C')toggleCamera();
+  if(e.key==='c'||e.key==='C')toggleCam();
   if((e.key==='e'||e.key==='E')&&gst==='PLAYING')interactDoor();
-  if(e.key==='Escape'&&gst==='NPC'){document.getElementById('npc-dlg').style.display='none';gst='PLAYING';}
 },{passive:true});
 window.addEventListener('keyup',e=>keys[e.key]=false,{passive:true});
 
-// Mouse rotation (desktop)
+// Desktop mouse rotation
 let mDrag=false,mLX=0;
 renderer.domElement.addEventListener('mousedown',e=>{if(gst==='PLAYING'){mDrag=true;mLX=e.clientX;}});
 window.addEventListener('mouseup',()=>mDrag=false);
 window.addEventListener('mousemove',e=>{if(mDrag&&gst==='PLAYING'){yaw-=(e.clientX-mLX)*.005;mLX=e.clientX;}});
 
 // ============================================================
-//  TOUCH CONTROLS — iOS-optimized, no coordinate bugs
+//  TOUCH CONTROLS — iOS-optimised, portrait + landscape
 // ============================================================
 let jAct=false,jTid=null,jBX=0,jBY=0,jDx=0,jDy=0;
-const JR=52; // joystick max radius px
+const JR=52; // max joystick radius px
 let cTid=null,cLX=0;
 
-const jZone=document.getElementById('joy-zone');
-const jKnob=document.getElementById('joy-knob');
-const camZone=document.getElementById('cam-zone');
+const jKnob=document.getElementById('jknob');
 
-// Get joystick center in PAGE coords (accounts for layout)
-function getJoyCenter(){
-  const r=jZone.getBoundingClientRect();
-  return {x:r.left+r.width/2, y:r.top+r.height/2};
+// Get joystick base center in page (viewport) coordinates
+function jCenter(){
+  const r=document.getElementById('jzone').getBoundingClientRect();
+  return{x:r.left+r.width/2,y:r.top+r.height/2};
 }
 
-function onTStart(e){
+function onTS(e){
+  // Do NOT preventDefault on overlays — allow tap buttons there
+  if(gst!=='PLAYING'&&gst!=='Q'&&gst!=='NPC')return;
   e.preventDefault();
   for(let i=0;i<e.changedTouches.length;i++){
     const t=e.changedTouches[i];
-    const jc=getJoyCenter();
-    // Is this touch near the joystick zone? (left half of screen OR near joy)
-    const nearJoy=t.clientX<vw()*0.45||
-      Math.hypot(t.clientX-jc.x,t.clientY-jc.y)<90;
+    const jc=jCenter();
+    const dx=t.clientX-jc.x,dy=t.clientY-jc.y;
+    const nearJoy=t.clientX<VW()*0.48||Math.sqrt(dx*dx+dy*dy)<90;
     if(nearJoy&&!jAct){
       jAct=true;jTid=t.identifier;
       jBX=t.clientX;jBY=t.clientY;
@@ -1337,53 +1237,57 @@ function onTStart(e){
     }
   }
 }
-function onTMove(e){
+function onTM(e){
+  if(gst!=='PLAYING')return;
   e.preventDefault();
   for(let i=0;i<e.changedTouches.length;i++){
     const t=e.changedTouches[i];
     if(t.identifier===jTid){
-      const dx=t.clientX-jBX, dy=t.clientY-jBY;
+      const dx=t.clientX-jBX,dy=t.clientY-jBY;
       const dist=Math.sqrt(dx*dx+dy*dy);
-      const r=dist>1?Math.min(dist,JR)/JR:0;
-      jDx=dist>1?(dx/dist)*r:0;
-      jDy=dist>1?(dy/dist)*r:0;
-      // Move knob visually within the fixed joystick base
-      const kx=jDx*JR, ky=jDy*JR;
-      jKnob.style.transform=`translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
+      const r=dist>0?Math.min(dist,JR)/JR:0;
+      jDx=dist>0?(dx/dist)*r:0;
+      jDy=dist>0?(dy/dist)*r:0;
+      // Move knob visually inside fixed joystick base
+      jKnob.style.transform=`translate(${jDx*JR-24}px,${jDy*JR-24}px)`;
     }
-    if(t.identifier===cTid&&gst==='PLAYING'){
-      yaw-=(t.clientX-cLX)*.008;
-      cLX=t.clientX;
+    if(t.identifier===cTid){
+      yaw-=(t.clientX-cLX)*.008;cLX=t.clientX;
     }
   }
 }
-function onTEnd(e){
+function onTE(e){
   for(let i=0;i<e.changedTouches.length;i++){
     const t=e.changedTouches[i];
     if(t.identifier===jTid){
       jAct=false;jTid=null;jDx=0;jDy=0;
-      jKnob.style.transform='translate(-50%,-50%)';
+      jKnob.style.transform='translate(-24px,-24px)'; // center (half of 48px)
     }
-    if(t.identifier===cTid){cTid=null;}
+    if(t.identifier===cTid)cTid=null;
   }
 }
 
-// Attach to document for maximum iOS capture
-document.addEventListener('touchstart', onTStart,{passive:false,capture:true});
-document.addEventListener('touchmove',  onTMove, {passive:false,capture:true});
-document.addEventListener('touchend',   onTEnd,  {passive:false,capture:true});
-document.addEventListener('touchcancel',onTEnd,  {passive:false,capture:true});
+document.addEventListener('touchstart',onTS,{passive:false});
+document.addEventListener('touchmove', onTM,{passive:false});
+document.addEventListener('touchend',  onTE,{passive:false});
+document.addEventListener('touchcancel',onTE,{passive:false});
 
-// Prevent all default browser gestures
-document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+// Prevent iOS pinch zoom and bounce
+document.addEventListener('gesturestart', e=>e.preventDefault(),{passive:false});
 document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});
 window.addEventListener('contextmenu',e=>e.preventDefault());
 
-// ——— DOOR OPENING ANIMATION ———
+// Action button wiring
+document.getElementById('abtn-cam').addEventListener('touchend',e=>{e.preventDefault();toggleCam();},{passive:false});
+document.getElementById('abtn-cam').addEventListener('click',toggleCam);
+document.getElementById('abtn-door').addEventListener('touchend',e=>{e.preventDefault();interactDoor();},{passive:false});
+document.getElementById('abtn-door').addEventListener('click',interactDoor);
+
+// ── Door open animation ──
 function animDoors(){
-  for(const dobj of Object.values(doorObjs)){
+  for(const dobj of Object.values(DOBJS)){
     if(dobj.opening){
-      if(dobj.mesh.parent&&dobj.mesh.position.y<WALL_H+2.5){
+      if(dobj.mesh.parent&&dobj.mesh.position.y<WH+2.5){
         dobj.mesh.position.y+=.14;
         if(dobj.lbl.parent)dobj.lbl.position.y+=.14;
       } else if(dobj.mesh.parent){
@@ -1394,28 +1298,19 @@ function animDoors(){
   }
 }
 
-// ——— COOLDOWNS ———
 function tickCD(){if(npcCD>0)npcCD--;}
 
-// ——— MAIN LOOP ———
+// ── Main loop ──
 function loop(){
   requestAnimationFrame(loop);
   if(gst==='PLAYING'){
-    updatePlayer();
-    updateNPCs();
-    checkNPCInteract();
-    animCoins();
-    animDoors();
-    updateCam();
-    tickCD();
+    updatePlayer();updateNPCs();checkNPCInteract();
+    animCoins();animDoors();updateCam();tickCD();
   } else {
-    animCoins();
-    animDoors();
-    updateCam();
+    animCoins();animDoors();updateCam();
   }
   renderer.render(scene,camera);
 }
-
 loop();
 </script>
 </body>
