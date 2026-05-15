@@ -29,8 +29,9 @@ canvas{display:block;width:100%!important;height:100%!important;}
 
 /* ——— CHAR SELECT ——— */
 .cards{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
-.char-card{background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.15);border-radius:16px;
-  padding:18px 16px;text-align:center;cursor:pointer;transition:.2s;min-width:150px;flex:1;max-width:220px;}
+.char-card{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.15);border-radius:16px;
+  padding:18px 16px;text-align:center;cursor:pointer;transition:.2s;min-width:150px;flex:1;max-width:220px;
+  display:block;font-family:inherit;touch-action:manipulation;}
 .char-card:active,.char-card:hover{transform:translateY(-3px);border-color:#FFD700;background:rgba(255,215,0,.1);}
 .char-card .ce{font-size:clamp(40px,10vw,60px);display:block;margin-bottom:8px;}
 .char-card h3{color:#fff;font-size:clamp(14px,3.5vw,18px);}
@@ -212,16 +213,16 @@ canvas{display:block;width:100%!important;height:100%!important;}
     <h1>🏠 Petualangan Suar & Pijar</h1>
     <h2>Pilih karaktermu!</h2>
     <div class="cards">
-      <div class="char-card" onclick="selectChar('suar')">
+      <button class="char-card" data-character="suar" type="button">
         <span class="ce">🇵🇹</span>
         <h3>Suar</h3>
         <p>7 tahun · Portugal #7</p>
-      </div>
-      <div class="char-card" onclick="selectChar('pijar')">
+      </button>
+      <button class="char-card" data-character="pijar" type="button">
         <span class="ce">🇪🇸</span>
         <h3>Pijar</h3>
         <p>8 tahun · Barcelona #10</p>
-      </div>
+      </button>
     </div>
     <p style="color:#555;font-size:11px;text-align:center;margin-top:14px;">
       Desktop: WASD bergerak · Q/E belok · C kamera<br>
@@ -757,11 +758,21 @@ const NPC_DEFS=[
 ];
 
 function selectChar(id){
+  if(gState!=='SELECT')return;
   selCharId=id;selChar=CHAR_CFGS[id];
   npcChar=CHAR_CFGS[id==='suar'?'pijar':'suar'];
   document.getElementById('ovCharSelect').style.display='none';
   initGame();
 }
+document.querySelectorAll('[data-character]').forEach(card=>{
+  const choose=event=>{
+    event.preventDefault();
+    event.stopPropagation();
+    selectChar(card.dataset.character);
+  };
+  card.addEventListener('click',choose);
+  card.addEventListener('pointerup',choose);
+});
 
 function initGame(){
   buildHouse();
@@ -1506,6 +1517,7 @@ const jzone=document.getElementById('jzone');
 const jthumb=document.getElementById('jthumb');
 
 function handleTStart(e){
+  if(gState==='SELECT')return;
   e.preventDefault();
   for(const t of e.changedTouches){
     const inLeft=t.clientX<gameWidth()*.52;
