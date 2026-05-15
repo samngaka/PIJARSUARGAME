@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<!-- iOS-specific: exact viewport, no zoom, no bounce -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Suar & Pijar">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d1a0d">
+<title>Petualangan Suar & Pijar</title>
+<style>
+/* ============ RESET & BASE ============ */
+*{margin:0;padding:0;box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;user-select:none;}
+
+html{
+  width:100%;height:100%;
+  /* Prevent iOS rubber-band scroll */
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+body{
+  width:100%;height:100%;
+  overflow:hidden;
+  overscroll-behavior:none;
+  background:#0d1a0d;
+  /* iOS safe area support */
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
+}
+
+/* Canvas fills viewport EXACTLY — Three.js controls size via JS */
+#gc{
+  position:fixed;
+  top:0;left:0;
+  width:100vw;height:100vh;
+  display:block;
+  touch-action:none;
+}
+
+/* ============ PORTRAIT GATE ============ */
+#portrait-gate{
+  display:none;
+  position:fixed;inset:0;z-index:9999;
+  background:#0d1a0d;
+  flex-direction:column;align-items:center;justify-content:center;
+  color:#fff;text-align:center;padding:32px;
+}
+#portrait-gate .pg-icon{font-size:64px;margin-bottom:20px;
+  animation:rock 1.5s ease-in-out infinite;}
+@keyframes rock{0%,100%{transform:rotate(-15deg);}50%{transform:rotate(15deg);}}
+#portrait-gate h2{color:#FFD700;font-size:22px;margin-bottom:10px;}
+#portrait-gate p{color:#aaa;font-size:15px;line-height:1.6;}
+
+/* Show portrait gate on portrait phones */
+@media (orientation:portrait) and (max-width:1024px){
+  #portrait-gate{display:flex;}
+  #game-wrap{display:none!important;}
+}
+
+/* ============ GAME WRAP ============ */
+#game-wrap{position:fixed;inset:0;display:block;}
+
+/* ============ HUD ============ */
+#hud{
+  position:fixed;
+  top:max(10px, env(safe-area-inset-top, 10px));
+  left:max(12px, env(safe-area-inset-left, 12px));
+  right:max(12px, env(safe-area-inset-right, 12px));
+  display:none;flex-wrap:wrap;gap:6px;
+  pointer-events:none;z-index:60;
+}
+.pill{
+  background:rgba(0,0,0,.7);color:#fff;
+  padding:5px 12px;border-radius:20px;
+  font-size:13px;font-weight:700;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+}
+
+/* ============ DOOR HINT ============ */
+#door-hint{
+  position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  background:rgba(255,193,7,.92);color:#000;
+  border-radius:14px;padding:10px 22px;
+  font-size:13px;font-weight:700;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  z-index:65;display:none;pointer-events:none;
+  white-space:nowrap;
+}
+
+/* ============ NPC DIALOG ============ */
+#npc-dlg{
+  position:fixed;
+  bottom:max(140px, calc(140px + env(safe-area-inset-bottom)));
+  left:50%;transform:translateX(-50%);
+  width:min(560px, calc(100vw - 32px));
+  background:#fff;
+  border-radius:18px;
+  padding:16px 20px 14px;
+  box-shadow:0 -2px 24px rgba(0,0,0,.3);
+  border:3px solid #4CAF50;
+  z-index:150;display:none;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+#npc-dlg .nname{font-size:15px;font-weight:800;margin-bottom:6px;}
+#npc-dlg .ntext{font-size:13px;color:#333;line-height:1.6;margin-bottom:12px;}
+#npc-dlg .nbtn-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.npc-btn{
+  padding:10px 16px;border:none;border-radius:20px;
+  font-size:13px;font-weight:700;cursor:pointer;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  /* iOS: large enough touch target */
+  min-height:44px;min-width:80px;
+  touch-action:manipulation;
+}
+.npc-btn:active{filter:brightness(.88);}
+
+/* ============ OVERLAYS ============ */
+.ov{
+  position:fixed;inset:0;z-index:200;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.88);
+  /* Allow scroll inside panels */
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.panel{
+  background:linear-gradient(160deg,#1a2a1a,#0a1510);
+  border-radius:20px;
+  padding:22px 24px;
+  border:3px solid #4CAF50;
+  box-shadow:0 0 40px #4CAF5040;
+  width:min(680px, calc(100vw - 24px));
+  max-height:calc(100vh - 80px);
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+.panel h1{font-size:clamp(17px,4.5vw,26px);color:#FFD700;text-align:center;margin-bottom:6px;}
+.panel h2{font-size:clamp(12px,3vw,17px);color:#A5D6A7;text-align:center;margin-bottom:14px;font-weight:400;}
+.btn-main{
+  display:block;margin:14px auto 0;
+  background:#4CAF50;color:#fff;border:none;
+  border-radius:24px;padding:14px 32px;
+  font-size:16px;font-weight:700;cursor:pointer;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  min-height:50px;touch-action:manipulation;
+}
+.btn-main:active{filter:brightness(.9);}
+
+/* Char cards */
+.cards{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.char-card{
+  background:rgba(255,255,255,.07);
+  border:2px solid rgba(255,255,255,.15);
+  border-radius:16px;padding:18px 14px;
+  text-align:center;cursor:pointer;
+  flex:1;min-width:140px;max-width:200px;
+  min-height:120px;
+  touch-action:manipulation;
+}
+.char-card:active{border-color:#FFD700;background:rgba(255,215,0,.12);transform:scale(.97);}
+.char-card .ce{font-size:clamp(36px,10vw,54px);display:block;margin-bottom:8px;}
+.char-card h3{color:#fff;font-size:clamp(14px,4vw,18px);}
+.char-card p{color:#aaa;font-size:clamp(11px,2.5vw,13px);margin-top:4px;}
+
+/* Questions */
+.q-progress{display:flex;gap:8px;justify-content:center;margin-bottom:12px;}
+.q-dot{
+  width:clamp(28px,7vw,34px);height:clamp(28px,7vw,34px);
+  border-radius:50%;background:rgba(255,255,255,.1);
+  border:2px solid rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:#fff;font-weight:700;
+}
+.q-dot.done{background:rgba(76,175,80,.55);border-color:#4CAF50;}
+.q-dot.act{background:rgba(255,193,7,.35);border-color:#FFC107;}
+.q-subj{color:#80CBC4;font-size:12px;text-align:center;margin-bottom:8px;}
+.q-txt{
+  color:#fff;font-size:clamp(15px,4.5vw,22px);font-weight:700;
+  text-align:center;margin-bottom:14px;
+  padding:12px;background:rgba(255,255,255,.07);
+  border-radius:12px;line-height:1.4;
+}
+.q-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.q-btn{
+  background:rgba(255,255,255,.09);
+  border:2px solid rgba(255,255,255,.18);
+  border-radius:12px;
+  padding:clamp(11px,3vw,15px) 10px;
+  color:#fff;font-size:clamp(13px,3.2vw,16px);
+  font-weight:600;cursor:pointer;
+  text-align:center;
+  min-height:50px;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  touch-action:manipulation;
+}
+.q-btn:active{background:rgba(41,182,246,.25);border-color:#29B6F6;}
+.q-btn.ok{background:rgba(76,175,80,.5)!important;border-color:#4CAF50!important;}
+.q-btn.no{background:rgba(244,67,54,.42)!important;border-color:#F44336!important;}
+.q-fb{text-align:center;margin-top:10px;font-size:14px;min-height:22px;color:#80CBC4;}
+
+/* Reward grid */
+.rw-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0;}
+.rw-item{
+  background:rgba(255,255,255,.08);
+  border:2px solid rgba(255,255,255,.18);
+  border-radius:12px;padding:10px 12px;
+  cursor:pointer;text-align:center;
+  min-width:85px;max-width:110px;
+  touch-action:manipulation;
+}
+.rw-item:active{border-color:#FFD700;background:rgba(255,215,0,.14);}
+.rw-item .ri{font-size:clamp(22px,6vw,34px);}
+.rw-item .rn{font-size:clamp(10px,2.2vw,12px);color:#ddd;margin-top:4px;}
+
+/* ============ MOBILE CONTROLS ============ */
+#m-ctrl{
+  position:fixed;
+  bottom:max(0px, env(safe-area-inset-bottom));
+  left:0;right:0;
+  height:max(140px, calc(120px + env(safe-area-inset-bottom)));
+  pointer-events:none;z-index:55;display:none;
+}
+
+/* Fixed joystick — bottom-left, large touch target */
+#joy-zone{
+  position:absolute;
+  bottom:max(16px, env(safe-area-inset-bottom, 16px));
+  left:max(16px, env(safe-area-inset-left, 16px));
+  width:120px;height:120px;
+  pointer-events:all;
+  touch-action:none;
+}
+#joy-base{
+  width:100%;height:100%;
+  background:rgba(255,255,255,.13);
+  border:3px solid rgba(255,255,255,.35);
+  border-radius:50%;
+  position:relative;
+  box-shadow:0 4px 20px rgba(0,0,0,.4);
+}
+#joy-knob{
+  width:46%;height:46%;
+  background:rgba(255,255,255,.6);
+  border-radius:50%;
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  box-shadow:0 2px 8px rgba(0,0,0,.5);
+  pointer-events:none;
+  transition:transform .05s linear;
+}
+
+/* Camera swipe zone — right 40% of screen */
+#cam-zone{
+  position:absolute;
+  bottom:0;right:0;
+  width:40%;height:100%;
+  pointer-events:all;
+  touch-action:none;
+}
+
+/* Action buttons — bottom-right */
+#act-btns{
+  position:absolute;
+  bottom:max(16px, env(safe-area-inset-bottom, 16px));
+  right:max(14px, env(safe-area-inset-right, 14px));
+  display:flex;flex-direction:column;gap:10px;
+  pointer-events:all;
+}
+.act-btn{
+  width:56px;height:56px;
+  background:rgba(0,0,0,.6);
+  border:2px solid rgba(255,255,255,.35);
+  border-radius:50%;
+  font-size:22px;color:#fff;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(0,0,0,.5);
+  touch-action:manipulation;
+  pointer-events:all;
+}
+.act-btn:active{background:rgba(255,255,255,.22);transform:scale(.92);}
+#btn-door{opacity:.38;transition:opacity .2s;}
+#btn-door.near{opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- Portrait Gate -->
+<div id="portrait-gate">
+  <div class="pg-icon">📱</div>
+  <h2>Putar Layar Dulu! 🔄</h2>
+  <p>Game ini dimainkan dalam mode<br><strong style="color:#FFD700;">Landscape (Horizontal)</strong> 🎮<br><br>Putar iPhone-mu sekarang!</p>
+</div>
+
+<div id="game-wrap">
+
+  <!-- HUD -->
+  <div id="hud">
+    <span class="pill" id="hud-lv">Level 1</span>
+    <span class="pill" id="hud-coins">🪙 0/45</span>
+    <span class="pill" id="hud-room">🏠</span>
+    <span class="pill" id="hud-cam">📷</span>
+  </div>
+
+  <!-- Door Hint -->
+  <div id="door-hint">🔐 Tekan tombol 🚪 untuk buka pintu!</div>
+
+  <!-- NPC Dialog -->
+  <div id="npc-dlg">
+    <div class="nname" id="npc-name"></div>
+    <div class="ntext" id="npc-text"></div>
+    <div class="nbtn-row" id="npc-btns"></div>
+  </div>
+
+  <!-- Mobile Controls -->
+  <div id="m-ctrl">
+    <div id="joy-zone">
+      <div id="joy-base"><div id="joy-knob"></div></div>
+    </div>
+    <div id="cam-zone"></div>
+    <div id="act-btns">
+      <button class="act-btn" id="btn-cam" ontouchstart="toggleCamera()">📷</button>
+      <button class="act-btn" id="btn-door" ontouchstart="interactDoor()">🚪</button>
+    </div>
+  </div>
+
+  <!-- Char Select -->
+  <div class="ov" id="ov-char">
+    <div class="panel">
+      <h1>🏠 Petualangan Suar & Pijar</h1>
+      <h2>Pilih karaktermu untuk bermain!</h2>
+      <div class="cards">
+        <div class="char-card" ontouchstart="selectChar('suar')" onclick="selectChar('suar')">
+          <span class="ce">🇵🇹</span>
+          <h3>Suar</h3>
+          <p>7 tahun · Portugal #7</p>
+        </div>
+        <div class="char-card" ontouchstart="selectChar('pijar')" onclick="selectChar('pijar')">
+          <span class="ce">🇪🇸</span>
+          <h3>Pijar</h3>
+          <p>8 tahun · Barcelona #10</p>
+        </div>
+      </div>
+      <p style="color:#555;font-size:11px;text-align:center;margin-top:14px;">
+        Mobile: Joystick kiri = gerak · Seret kanan = putar kamera<br>
+        Tombol 🚪 = buka pintu · Tombol 📷 = ganti sudut pandang
+      </p>
+    </div>
+  </div>
+
+  <!-- Question Overlay -->
+  <div class="ov" id="ov-q" style="display:none;">
+    <div class="panel">
+      <h2 id="q-lbl" style="font-size:13px;margin-bottom:12px;">🔐 Jawab 3 Pertanyaan!</h2>
+      <div class="q-progress" id="q-prog"></div>
+      <div class="q-subj" id="q-subj"></div>
+      <div class="q-txt" id="q-txt"></div>
+      <div class="q-grid" id="q-opts"></div>
+      <div class="q-fb" id="q-fb"></div>
+    </div>
+  </div>
+
+  <!-- LV1 Win -->
+  <div class="ov" id="ov-lv1win" style="display:none;">
+    <div class="panel">
+      <h1>🎉 45 Koin Terkumpul!</h1>
+      <h2>Pilih jersey Liga Inggris hadiahmu:</h2>
+      <div class="rw-grid" id="jersey-grid"></div>
+      <button class="btn-main" id="lv1-next" style="display:none;" onclick="startLv2()">Lanjut Level 2 ➡️</button>
+    </div>
+  </div>
+
+  <!-- LV2 -->
+  <div class="ov" id="ov-lv2" style="display:none;">
+    <div class="panel">
+      <h1>🧩 Susun Lego!</h1>
+      <div style="text-align:center;margin:10px 0;">
+        <span id="lv2-tgt" style="font-size:clamp(48px,12vw,68px);display:block;"></span>
+        <p id="lv2-q" style="color:#FFC107;font-weight:700;font-size:clamp(12px,3vw,16px);margin-top:6px;"></p>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;" id="lv2-opts"></div>
+      <p id="lv2-sc" style="text-align:center;color:#A5D6A7;margin-top:12px;font-size:14px;"></p>
+    </div>
+  </div>
+
+  <!-- LV3 -->
+  <div class="ov" id="ov-lv3" style="display:none;">
+    <div class="panel">
+      <h1>📐 Matematika!</h1>
+      <div class="q-progress" id="lv3-prog"></div>
+      <div style="font-size:clamp(20px,5.5vw,28px);font-weight:800;color:#fff;text-align:center;
+        padding:14px;background:rgba(255,255,255,.07);border-radius:12px;margin:10px 0;" id="lv3-q"></div>
+      <div class="q-grid" id="lv3-opts"></div>
+      <p id="lv3-sc" style="text-align:center;color:#80CBC4;margin-top:10px;font-size:14px;"></p>
+    </div>
+  </div>
+
+  <!-- Final Win -->
+  <div class="ov" id="ov-win" style="display:none;">
+    <div class="panel" style="text-align:center;">
+      <h1>🏆 SELAMAT! KAMU HEBAT! 🏆</h1>
+      <p id="win-name" style="color:#A5D6A7;font-size:clamp(13px,3vw,17px);margin:8px 0;"></p>
+      <div style="font-size:clamp(36px,8vw,52px);margin:12px 0;">🎉⚽🧩🏅</div>
+      <div id="win-rewards" style="color:#FFD700;font-size:clamp(13px,3vw,16px);line-height:2;"></div>
+      <button class="btn-main" ontouchstart="location.reload()" onclick="location.reload()">Main Lagi! 🔄</button>
+    </div>
+  </div>
+
+</div><!-- /game-wrap -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ====================================================
+   PETUALANGAN SUAR & PIJAR — iOS/Android Optimized
+   Three.js r128
+   ==================================================== */
+'use strict';
+
+// ——— iOS canvas roundRect polyfill ———
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
+    this.beginPath();
+    this.moveTo(x+r,y);this.lineTo(x+w-r,y);
+    this.quadraticCurveTo(x+w,y,x+w,y+r);
+    this.lineTo(x+w,y+h-r);this.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    this.lineTo(x+r,y+h);this.quadraticCurveTo(x,y+h,x,y+h-r);
+    this.lineTo(x,y+r);this.quadraticCurveTo(x,y,x+r,y);this.closePath();
+  };
+}
+
+// ——— RENDERER + SCENE ———
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87CEEB);
+scene.fog = new THREE.Fog(0x87CEEB, 26, 55);
+
+// Use visualViewport for accurate iOS dimensions
+function vw(){ return window.visualViewport ? window.visualViewport.width  : window.innerWidth;  }
+function vh(){ return window.visualViewport ? window.visualViewport.height : window.innerHeight; }
+
+const camera = new THREE.PerspectiveCamera(68, vw()/vh(), 0.1, 110);
+camera.position.set(0, 5, 10);
+
+const renderer = new THREE.WebGLRenderer({
+  antialias: false,               // off for mobile perf
+  powerPreference:'low-power',    // iOS battery saving
+  preserveDrawingBuffer: false,
+});
+renderer.setSize(vw(), vh());
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = false; // off for iOS perf
+renderer.domElement.id = 'gc';
+document.getElementById('game-wrap').prepend(renderer.domElement);
+
+// Handle resize + orientation change on iOS
+function onResize(){
+  // Small delay on iOS to get correct dimensions after orientation change
+  setTimeout(()=>{
+    camera.aspect = vw()/vh();
+    camera.updateProjectionMatrix();
+    renderer.setSize(vw(), vh());
+  }, 100);
+}
+window.addEventListener('resize', onResize);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', onResize);
+
+// Lights — higher ambient for no-shadow mobile
+scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+const sun = new THREE.DirectionalLight(0xfff5e0, 0.6);
+sun.position.set(15, 25, 10);
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0x87CEEB, 0x4CAF50, 0.4));
+
+// ——— CONSTANTS ———
+const WALL_H=4.5, WALL_T=0.5, DOOR_H=3.2;
+const COIN_TOTAL=45;
+const PSPD=0.1, NSPD=0.03;
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+
+// ——— ROOM DEFS ———
+const ROOMS=[
+  {id:'living',    x0:-7,z0:-17,x1:23,z1:13, fc:0xFFF8E7,wc:0xEED5A0,name:'Living Room'},
+  {id:'kKakak',   x0:-26,z0:-25,x1:-7,z1:-7, fc:0xE8F5E9,wc:0xA5D6A7,name:'Kamar Kakak'},
+  {id:'rTV',      x0:-26,z0:-7, x1:-7,z1:9,  fc:0xE3F2FD,wc:0x90CAF9,name:'Ruang TV'},
+  {id:'kKiri',    x0:-26,z0:9,  x1:-7,z1:25, fc:0xF3E5F5,wc:0xCE93D8,name:'Kamar'},
+  {id:'kKanan',   x0:23, z0:-17,x1:38,z1:13, fc:0xFCE4EC,wc:0xF48FB1,name:'Kamar'},
+  {id:'kMandi',   x0:-7, z0:13, x1:12,z1:27, fc:0xB2EBF2,wc:0x80DEEA,name:'Kamar Mandi'},
+  {id:'dapur',    x0:12, z0:13, x1:38,z1:27, fc:0xFFFDE7,wc:0xFFF176,name:'Dapur'},
+];
+
+// ——— DOOR DEFS ———
+// wallDir: EW = vertical wall (constant x), NS = horizontal wall (constant z)
+const DDEFS=[
+  {id:'d01',wallDir:'EW',x:-7, zS:-21,zE:-14,rooms:['kKakak','living']},
+  {id:'d02',wallDir:'NS',z:-7, xS:-23,xE:-15,rooms:['kKakak','rTV']},
+  {id:'d03',wallDir:'EW',x:-7, zS:-4, zE:4,  rooms:['rTV','living']},
+  {id:'d04',wallDir:'NS',z:9,  xS:-23,xE:-15,rooms:['rTV','kKiri']},
+  {id:'d05',wallDir:'EW',x:23, zS:-7, zE:2,  rooms:['living','kKanan']},
+  {id:'d06',wallDir:'NS',z:13, xS:-3, xE:5,  rooms:['living','kMandi']},
+  {id:'d07',wallDir:'NS',z:13, xS:15, xE:23, rooms:['living','dapur']},
+  {id:'d08',wallDir:'NS',z:13, xS:27, xE:36, rooms:['kKanan','dapur']},
+  {id:'d09',wallDir:'EW',x:12, zS:17, zE:25, rooms:['kMandi','dapur']},
+  {id:'d10',wallDir:'EW',x:-7, zS:15, zE:23, rooms:['kKiri','kMandi']},
+];
+
+// ——— QUESTIONS ———
+const QP=[
+  {s:'Matematika 🔢',q:'3 + 5 = ?',  o:['8','7','9','6'],   a:0},
+  {s:'Matematika 🔢',q:'10 - 4 = ?', o:['5','6','7','4'],   a:1},
+  {s:'Matematika 🔢',q:'7 + 2 = ?',  o:['8','10','9','11'], a:2},
+  {s:'Matematika 🔢',q:'9 - 3 = ?',  o:['5','7','4','6'],   a:3},
+  {s:'Matematika 🔢',q:'6 + 4 = ?',  o:['11','9','8','10'], a:3},
+  {s:'Matematika 🔢',q:'8 - 5 = ?',  o:['4','3','2','5'],   a:1},
+  {s:'Matematika 🔢',q:'4 + 7 = ?',  o:['10','12','11','9'],a:2},
+  {s:'Matematika 🔢',q:'15 - 6 = ?', o:['8','10','9','7'],  a:2},
+  {s:'Agama Islam 🕌',q:'Kitab suci umat Islam...',o:['Injil','Taurat','Al-Quran','Zabur'],a:2},
+  {s:'Agama Islam 🕌',q:'Rukun Islam ada berapa?',o:['3','4','6','5'],a:3},
+  {s:'Agama Islam 🕌',q:'Tempat ibadah Islam...',  o:['Gereja','Masjid','Pura','Vihara'],a:1},
+  {s:'Agama Islam 🕌',q:'Nabi terakhir Islam...',  o:['Isa AS','Musa AS','Ibrahim AS','Muhammad SAW'],a:3},
+  {s:'Agama Islam 🕌',q:'Hari raya setelah Ramadan...',o:['Idul Adha','Maulid Nabi','Idul Fitri','Isra Miraj'],a:2},
+  {s:'Agama Islam 🕌',q:'Sholat wajib sehari...',  o:['4 kali','3 kali','5 kali','6 kali'],a:2},
+  {s:'IPAS 🌱',q:'Hewan penghasil susu...', o:['Ayam','Ikan','Sapi','Rusa'],       a:2},
+  {s:'IPAS 🌱',q:'Matahari terbit dari...', o:['Barat','Selatan','Utara','Timur'], a:3},
+  {s:'IPAS 🌱',q:'Manusia bernapas dg...', o:['Jantung','Ginjal','Paru-paru','Hati'],a:2},
+  {s:'IPAS 🌱',q:'Warna daun sehat...',    o:['Kuning','Merah','Biru','Hijau'],    a:3},
+  {s:'IPAS 🌱',q:'Air mendidih pada suhu...',o:['50°C','0°C','100°C','75°C'],     a:2},
+  {s:'IPAS 🌱',q:'Hewan yang bisa terbang...',o:['Ular','Burung','Kucing','Ikan'],a:1},
+  {s:'Bahasa Inggris 🌍',q:'"Cat" artinya...',   o:['Anjing','Kambing','Sapi','Kucing'],   a:3},
+  {s:'Bahasa Inggris 🌍',q:'"Book" artinya...',  o:['Pensil','Buku','Tas','Penggaris'],    a:1},
+  {s:'Bahasa Inggris 🌍',q:'"Red" = warna...',   o:['Biru','Kuning','Merah','Hijau'],      a:2},
+  {s:'Bahasa Inggris 🌍',q:'"School" artinya...', o:['Rumah','Pasar','Taman','Sekolah'],   a:3},
+  {s:'Bahasa Inggris 🌍',q:'"Happy" artinya...',  o:['Sedih','Marah','Takut','Senang'],    a:3},
+  {s:'Bahasa Inggris 🌍',q:'"Good morning" =...', o:['Selamat malam','Selamat siang','Selamat pagi','Selamat sore'],a:2},
+];
+
+const JERSEYS=[
+  {n:'Arsenal',c:'#EF0107',e:'🔴'},{n:'Chelsea',c:'#034694',e:'🔵'},
+  {n:'Man City',c:'#6CABDD',e:'💙'},{n:'Man Utd',c:'#DA020E',e:'❤️'},
+  {n:'Liverpool',c:'#C8102E',e:'🦁'},{n:'Tottenham',c:'#132257',e:'🐓'},
+];
+const LEGO=[{e:'🏍️',n:'Motor'},{e:'🚗',n:'Mobil'},{e:'✈️',n:'Pesawat'},{e:'🚌',n:'Bus'}];
+
+function genMath(){
+  const qs=[]; const types=['add','sub','mul','add','sub'];
+  for(const t of types){
+    let a,b,ans,text;
+    if(t==='add'){a=rnd(10,49);b=rnd(5,39);ans=a+b;text=`${a} + ${b} = ?`;}
+    else if(t==='sub'){a=rnd(20,59);b=rnd(5,19);if(b>a)[a,b]=[b,a];ans=a-b;text=`${a} - ${b} = ?`;}
+    else{a=rnd(2,6);b=rnd(2,9);ans=a*b;text=`${a} × ${b} = ?`;}
+    const ws=new Set();
+    while(ws.size<3){const w=ans+rnd(-6,6);if(w!==ans&&w>0)ws.add(w);}
+    qs.push({text,ans,opts:[ans,...ws].sort(()=>Math.random()-.5)});
+  }
+  return qs;
+}
+
+// ——— MATERIAL CACHE (shared, non-transparent) ———
+const MC={};
+function lm(c,x){
+  const k=c+'|'+JSON.stringify(x||{});
+  if(!MC[k])MC[k]=new THREE.MeshLambertMaterial({color:c,...(x||{})});
+  return MC[k];
+}
+
+// ——— BOX ———
+function bx(x,y,z,w,h,d,col,extra){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),lm(col,extra));
+  m.position.set(x,y,z);scene.add(m);return m;
+}
+
+// ——— WALL BUILDING ———
+function wsX(x0,x1,z,c){const l=x1-x0;if(l<.01)return;bx((x0+x1)/2,WALL_H/2,z,l,WALL_H,WALL_T,c);}
+function wsZ(x,z0,z1,c){const l=z1-z0;if(l<.01)return;bx(x,WALL_H/2,(z0+z1)/2,WALL_T,WALL_H,l,c);}
+function gapX(z,x0,x1,rid){
+  return DDEFS.filter(d=>d.wallDir==='NS'&&Math.abs(d.z-z)<.1&&d.rooms.includes(rid))
+    .map(d=>({s:Math.max(d.xS,x0),e:Math.min(d.xE,x1)})).filter(g=>g.e>g.s);
+}
+function gapZ(x,z0,z1,rid){
+  return DDEFS.filter(d=>d.wallDir==='EW'&&Math.abs(d.x-x)<.1&&d.rooms.includes(rid))
+    .map(d=>({s:Math.max(d.zS,z0),e:Math.min(d.zE,z1)})).filter(g=>g.e>g.s);
+}
+function bwX(x0,x1,z,gaps,c){
+  const sg=[...gaps].sort((a,b)=>a.s-b.s);let cur=x0;
+  for(const g of sg){wsX(cur,g.s,z,c);cur=g.e;}wsX(cur,x1,z,c);
+}
+function bwZ(x,z0,z1,gaps,c){
+  const sg=[...gaps].sort((a,b)=>a.s-b.s);let cur=z0;
+  for(const g of sg){wsZ(x,cur,g.s,c);cur=g.e;}wsZ(x,cur,z1,c);
+}
+
+// ——— BUILD HOUSE ———
+function buildHouse(){
+  // Ground
+  const gr=new THREE.Mesh(new THREE.PlaneGeometry(200,200),lm(0x4CAF50));
+  gr.rotation.x=-Math.PI/2;gr.position.y=-0.05;scene.add(gr);
+
+  for(const r of ROOMS){
+    const {id,x0,z0,x1,z1,fc,wc}=r;
+    const rw=x1-x0,rd=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
+    // Floor
+    const fl=new THREE.Mesh(new THREE.PlaneGeometry(rw,rd),lm(fc));
+    fl.rotation.x=-Math.PI/2;fl.position.set(cx,.01,cz);scene.add(fl);
+    // Ceiling (backside, semi-transparent hint)
+    const cl=new THREE.Mesh(new THREE.PlaneGeometry(rw,rd),
+      lm(0xF0F0F0,{transparent:true,opacity:.25,side:THREE.BackSide}));
+    cl.rotation.x=Math.PI/2;cl.position.set(cx,WALL_H,cz);scene.add(cl);
+    // Walls
+    bwX(x0,x1,z0,gapX(z0,x0,x1,id),wc);
+    bwX(x0,x1,z1,gapX(z1,x0,x1,id),wc);
+    bwZ(x0,z0,z1,gapZ(x0,z0,z1,id),wc);
+    bwZ(x1,z0,z1,gapZ(x1,z0,z1,id),wc);
+    // Skirting
+    const sk=0x795548,sh=0.13;
+    bx(cx,sh/2,z0,rw,sh,sh,sk);bx(cx,sh/2,z1,rw,sh,sh,sk);
+    bx(x0,sh/2,cz,sh,sh,rd,sk);bx(x1,sh/2,cz,sh,sh,rd,sk);
+  }
+  buildFurniture();
+}
+
+function buildFurniture(){
+  // Living Room
+  bx(4,.5,-10,7,1,3,0xFF8A65);   // sofa
+  bx(4,1.3,-11.4,7,.5,.5,0xFF7043); // sofa back
+  bx(4,.5,-8,4,.55,2.5,0x8D6E63);// coffee table
+  bx(16,.5,-14,4,1,.5,0x37474F); // TV stand
+  bx(16,1.3,-14.1,3.5,1.5,.1,0x1565C0); // TV
+  bx(13,.5,-12,3.5,1,2.5,0x795548); // desk Akang
+  bx(13,.95,-12,3,.1,2,0xB0BEC5);   // desk top
+  // Kamar Kakak
+  bx(-18,.5,-21,9,1.5,5,0xF48FB1); // bed
+  bx(-18,1.3,-22.8,9,.4,1.5,0xF06292);
+  bx(-10,.5,-17,4.5,.8,2.5,0x795548); // desk
+  bx(-10,.95,-17,4,.1,2,0x90A4AE);
+  // Ruang TV
+  bx(-18,.5,-3.5,9,1.5,4.5,0x81D4FA); // couch
+  bx(-18,1.3,-5.2,9,.4,1.5,0x4FC3F7);
+  bx(-10,.5,-1.5,4,1,.5,0x37474F);
+  bx(-10,1.4,-1.6,3.5,1.6,.1,0x1565C0);
+  // Kamar Kiri
+  bx(-18,.5,17,9,1.5,5,0xCE93D8);
+  bx(-18,1.3,15,9,.4,1.5,0xAB47BC);
+  bx(-10,.5,13.5,4.5,.8,2.5,0x795548);
+  // Kamar Kanan
+  bx(30,.5,-10,9,1.5,5.5,0xFF8A65);
+  bx(30,1.3,-12,9,.4,1.5,0xFF7043);
+  bx(26,.5,5,4.5,.8,2.5,0x795548);
+  // Kamar Mandi
+  bx(-1,.5,18,2.5,1.5,1.5,0xEEEEEE);
+  bx(6,.4,20,3,1,2,0xEEEEEE);
+  bx(6,.05,19,3,.2,2,0x80DEEA,{transparent:true,opacity:.5});
+  // Dapur
+  bx(18,.5,16,7,1.2,2,0xFFCCBC);
+  bx(18,1.1,16,6.5,.1,1.5,0xBDBDBD);
+  bx(30,.5,16,6,.85,3.5,0x795548);
+  bx(36,.5,20,3,1.2,5,0xFFCCBC);
+  // Plants
+  const addPlant=(x,z)=>{bx(x,.5,z,.3,1,.3,0x795548);bx(x,1.3,z,1.6,1.6,1.6,0x2E7D32);};
+  addPlant(-24,11);addPlant(22,-15);addPlant(-6,11.5);
+}
+
+// ——— DOOR OBJECTS ———
+const DCOLS=[0xFF5722,0x9C27B0,0x2196F3,0xFF9800,0x4CAF50,0xF44336,0x00BCD4,0xFF4081,0x8BC34A,0xFFC107];
+const doorObjs={};
+function buildDoors(){
+  DDEFS.forEach((d,i)=>{
+    let mx,mz,mw,md;
+    if(d.wallDir==='NS'){mw=d.xE-d.xS;md=WALL_T+.3;mx=(d.xS+d.xE)/2;mz=d.z;}
+    else{mw=WALL_T+.3;md=d.zE-d.zS;mx=d.x;mz=(d.zS+d.zE)/2;}
+    // Own material per door for independent opacity animation
+    const mat=new THREE.MeshLambertMaterial({color:DCOLS[i%DCOLS.length],transparent:true,opacity:.88});
+    const dm=new THREE.Mesh(new THREE.BoxGeometry(mw,DOOR_H,md),mat);
+    dm.position.set(mx,DOOR_H/2,mz);scene.add(dm);
+    // Label canvas
+    const cv=document.createElement('canvas');cv.width=128;cv.height=48;
+    const c=cv.getContext('2d');
+    c.fillStyle='rgba(0,0,0,.78)';c.roundRect(0,4,128,40,8);c.fill();
+    c.font='bold 15px Arial';c.fillStyle='#FFD700';c.textAlign='center';c.textBaseline='middle';
+    c.fillText('🔐 Pintu '+(i+1),64,24);
+    const lbl=new THREE.Mesh(new THREE.PlaneGeometry(1.6,.6),
+      new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
+    lbl.position.set(mx,DOOR_H+.5,mz);lbl.renderOrder=10;scene.add(lbl);
+    const qs=[...QP].sort(()=>Math.random()-.5).slice(0,3);
+    doorObjs[d.id]={mat,mesh:dm,lbl,def:d,locked:true,qs,qi:0,opening:false};
+  });
+}
+
+// ——— COINS ———
+const coins=[];
+function spawnCoins(){
+  const dist={living:13,kKakak:5,rTV:5,kKiri:5,kKanan:5,kMandi:5,dapur:7};
+  for(const [rid,cnt] of Object.entries(dist)){
+    const rm=ROOMS.find(r=>r.id===rid);
+    for(let i=0;i<cnt;i++){
+      let cx,cz,tries=0;
+      do{cx=rm.x0+2+Math.random()*(rm.x1-rm.x0-4);cz=rm.z0+2+Math.random()*(rm.z1-rm.z0-4);tries++;}
+      while(tries<30&&coins.some(c=>Math.hypot(c.x-cx,c.z-cz)<1.8));
+      const cg=new THREE.Group();
+      cg.add(Object.assign(new THREE.Mesh(new THREE.TorusGeometry(.3,.09,6,14),lm(0xFFD700)),
+        {rotation:{x:Math.PI/2,y:0,z:0}}));
+      cg.position.set(cx,.9,cz);
+      cg.userData.ph=Math.random()*Math.PI*2;
+      scene.add(cg);
+      coins.push({g:cg,x:cx,z:cz,col:false,ph:cg.userData.ph});
+    }
+  }
+}
+
+// ——— ROBLOX CHARACTER ———
+function mkFace(glasses){
+  const cv=document.createElement('canvas');cv.width=64;cv.height=64;
+  const c=cv.getContext('2d');
+  c.fillStyle='#FFCC80';c.fillRect(0,0,64,64);
+  c.fillStyle='#fff';c.fillRect(10,19,16,12);c.fillRect(38,19,16,12);
+  c.fillStyle='#222';c.fillRect(15,22,8,8);c.fillRect(43,22,8,8);
+  c.fillStyle='#fff';c.fillRect(16,23,3,3);c.fillRect(44,23,3,3);
+  c.fillStyle='#5D4037';c.fillRect(8,14,20,3);c.fillRect(36,14,20,3);
+  c.strokeStyle='#795548';c.lineWidth=2.5;c.beginPath();
+  c.arc(32,46,9,.1,Math.PI-.1);c.stroke();
+  if(glasses){
+    c.strokeStyle='#444';c.lineWidth=2.5;
+    c.strokeRect(8,17,18,15);c.strokeRect(38,17,18,15);
+    c.beginPath();c.moveTo(26,24.5);c.lineTo(38,24.5);c.stroke();
+  }
+  return new THREE.CanvasTexture(cv);
+}
+function mkNumTex(n){
+  const cv=document.createElement('canvas');cv.width=32;cv.height=32;
+  const c=cv.getContext('2d');
+  c.font='bold 22px Arial';c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
+  c.fillText(n,16,16);return new THREE.CanvasTexture(cv);
+}
+function mkNameTex(n){
+  const cv=document.createElement('canvas');cv.width=256;cv.height=64;
+  const c=cv.getContext('2d');
+  c.fillStyle='rgba(0,0,0,.68)';c.roundRect(4,8,248,48,10);c.fill();
+  c.font='bold 22px -apple-system,Arial';c.fillStyle='#FFD700';
+  c.textAlign='center';c.textBaseline='middle';c.fillText(n,128,34);
+  return new THREE.CanvasTexture(cv);
+}
+
+function mkChar(cfg){
+  const g=new THREE.Group();
+  const{skin,hair,shirt,pants,jerseyNum,name,glasses,bald,femHair,stripe}=cfg;
+  const fm=[lm(skin),lm(skin),lm(skin),lm(skin),
+    new THREE.MeshLambertMaterial({map:mkFace(glasses)}),lm(skin)];
+  // Head
+  const head=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2),fm);
+  head.position.set(0,3.2,0);g.add(head);
+  // Hair
+  if(!bald&&hair!=null){
+    const hm=new THREE.Mesh(new THREE.BoxGeometry(1.25,.55,1.25),lm(hair));
+    hm.position.set(0,3.68,0);g.add(hm);
+    if(femHair){
+      const br=new THREE.Mesh(new THREE.BoxGeometry(.28,1.4,.28),lm(hair));
+      br.position.set(0,2.8,-.55);g.add(br);
+    }
+  }
+  // Neck
+  const nk=new THREE.Mesh(new THREE.BoxGeometry(.5,.38,.5),lm(skin));
+  nk.position.set(0,2.62,0);g.add(nk);
+  // Torso
+  const torso=new THREE.Mesh(new THREE.BoxGeometry(1.1,1.4,.65),lm(shirt));
+  torso.position.set(0,1.8,0);g.add(torso);
+  if(stripe&&stripe!==shirt){
+    const st=new THREE.Mesh(new THREE.BoxGeometry(.28,1.4,.67),lm(stripe));
+    st.position.set(0,1.8,0);g.add(st);
+  }
+  if(jerseyNum){
+    const nm=new THREE.Mesh(new THREE.PlaneGeometry(.42,.42),
+      new THREE.MeshLambertMaterial({map:mkNumTex(jerseyNum),transparent:true}));
+    nm.position.set(0,1.8,.34);g.add(nm);
+  }
+  // Arms
+  const aL=new THREE.Group();aL.position.set(-.85,2.2,0);
+  aL.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.42,1,.42),lm(shirt)),{position:{x:0,y:-.5,z:0}}));
+  aL.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.38,.9,.38),lm(skin)),{position:{x:0,y:-1.38,z:0}}));
+  g.add(aL);
+  const aR=new THREE.Group();aR.position.set(.85,2.2,0);
+  aR.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.42,1,.42),lm(shirt)),{position:{x:0,y:-.5,z:0}}));
+  aR.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.38,.9,.38),lm(skin)),{position:{x:0,y:-1.38,z:0}}));
+  g.add(aR);
+  // Legs
+  const lL=new THREE.Group();lL.position.set(-.33,1.1,0);
+  lL.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.44,1,.44),lm(pants)),{position:{x:0,y:-.5,z:0}}));
+  lL.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.4,.9,.4),lm(0x1A1A1A)),{position:{x:0,y:-1.38,z:0}}));
+  g.add(lL);
+  const lR=new THREE.Group();lR.position.set(.33,1.1,0);
+  lR.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.44,1,.44),lm(pants)),{position:{x:0,y:-.5,z:0}}));
+  lR.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.4,.9,.4),lm(0x1A1A1A)),{position:{x:0,y:-1.38,z:0}}));
+  g.add(lR);
+  // Name tag
+  if(name){
+    const ntg=new THREE.Mesh(new THREE.PlaneGeometry(2.2,.55),
+      new THREE.MeshBasicMaterial({map:mkNameTex(name),transparent:true,depthTest:false}));
+    ntg.position.set(0,4.6,0);ntg.renderOrder=10;g.add(ntg);
+  }
+  return {group:g,aL,aR,lL,lR,wt:0};
+}
+
+// ——— GAME STATE ———
+let gst='SELECT';
+let selId=null,selCfg=null,npcCfg=null;
+let cam3rd=true;
+let yaw=Math.PI;
+let coinCount=0,lvl=1;
+let lv2qi=0,lv2sc=0,lv2ti=0;
+let lv3qs=[],lv3qi=0,lv3sc=0;
+let chJersey=null,chLego=null;
+let npcCD=0;
+let nearDoor=null;
+const pPos=new THREE.Vector3(4,0,2);
+
+let pChr=null;
+const NPCList=[];
+
+const CCFG={
+  suar:{skin:0xFFCC80,hair:0x4E342E,shirt:0xC62828,stripe:0xFFFFFF,pants:0x1565C0,jerseyNum:7},
+  pijar:{skin:0xFFCC80,hair:0x212121,shirt:0x1565C0,stripe:0xFDD835,pants:0xC62828,jerseyNum:10},
+};
+const NDEFS=[
+  {id:'akang',name:'Akang 🧑', skin:0xD2906C,bald:true,hair:null,shirt:0x212121,stripe:0x212121,pants:0x212121,room:'living',sx:13,sz:-8},
+  {id:'ibu',  name:'Ibu 👩',   skin:0xFFCC80,hair:0x212121,glasses:true,shirt:0xE91E63,stripe:0xE91E63,pants:0x880E4F,room:'living',sx:5,sz:-12},
+  {id:'binar',name:'Kak Binar 👧',skin:0xFFCC80,hair:0x4E342E,femHair:true,shirt:0x1565C0,stripe:0xFFFFFF,pants:0x37474F,room:'kKakak',sx:-18,sz:-19},
+];
+
+function selectChar(id){
+  if(gst!=='SELECT')return;
+  // prevent double trigger from ontouchstart + onclick
+  selId=id; selCfg=CCFG[id];
+  npcCfg=CCFG[id==='suar'?'pijar':'suar'];
+  document.getElementById('ov-char').style.display='none';
+  initGame();
+}
+
+function initGame(){
+  buildHouse();
+  buildDoors();
+  // Player
+  pChr=mkChar({...selCfg,name:selId==='suar'?'Suar':'Pijar'});
+  pChr.group.position.copy(pPos);
+  scene.add(pChr.group);
+  // NPC of unchosen char
+  const nc=mkChar({...npcCfg,name:selId==='suar'?'Pijar':'Suar'});
+  nc.group.position.set(-18,0,0);scene.add(nc.group);
+  NPCList.push({obj:nc.group,chr:nc,room:'rTV',tgt:new THREE.Vector3(-18,0,0),wait:80});
+  // Game NPCs
+  for(const nd of NDEFS){
+    const nc2=mkChar({...nd});
+    nc2.group.position.set(nd.sx,0,nd.sz);scene.add(nc2.group);
+    NPCList.push({obj:nc2.group,chr:nc2,id:nd.id,cfg:nd,room:nd.room,tgt:new THREE.Vector3(nd.sx,0,nd.sz),wait:rnd(40,120)});
+  }
+  spawnCoins();
+  document.getElementById('hud').style.display='flex';
+  document.getElementById('m-ctrl').style.display='block';
+  updateHUD();
+  gst='PLAYING';
+}
+
+// ——— WALKABLE ———
+function walkable(px,pz){
+  const r=.45;
+  for(const rm of ROOMS)
+    if(px>rm.x0+r&&px<rm.x1-r&&pz>rm.z0+r&&pz<rm.z1-r)return true;
+  for(const dobj of Object.values(doorObjs)){
+    if(!dobj.locked||dobj.opening){
+      const d=dobj.def;
+      if(d.wallDir==='NS'){if(Math.abs(pz-d.z)<1.2&&px>d.xS-r&&px<d.xE+r)return true;}
+      else{if(Math.abs(px-d.x)<1.2&&pz>d.zS-r&&pz<d.zE+r)return true;}
+    }
+  }
+  return false;
+}
+function blocked(px,pz){
+  const r=.5;
+  for(const dobj of Object.values(doorObjs)){
+    if(!dobj.locked||dobj.opening)continue;
+    const d=dobj.def;
+    if(d.wallDir==='NS'){if(Math.abs(pz-d.z)<r+WALL_T*.8&&px>d.xS-r&&px<d.xE+r)return true;}
+    else{if(Math.abs(px-d.x)<r+WALL_T*.8&&pz>d.zS-r&&pz<d.zE+r)return true;}
+  }
+  return false;
+}
+
+// ——— PLAYER UPDATE ———
+let wkT=0;
+const keys={};
+function updatePlayer(){
+  if(gst!=='PLAYING')return;
+  let dx=0,dz=0;
+  // Keyboard
+  if(keys['ArrowLeft']||keys['q']||keys['Q'])yaw+=.06;
+  if(keys['ArrowRight']||keys['e']||keys['E'])yaw-=.06;
+  if(keys['ArrowUp']||keys['w']||keys['W']){dx-=Math.sin(yaw)*PSPD;dz-=Math.cos(yaw)*PSPD;}
+  if(keys['ArrowDown']||keys['s']||keys['S']){dx+=Math.sin(yaw)*PSPD;dz+=Math.cos(yaw)*PSPD;}
+  if(keys['a']||keys['A']){dx-=Math.cos(yaw)*PSPD*.7;dz+=Math.sin(yaw)*PSPD*.7;}
+  if(keys['d']||keys['D']){dx+=Math.cos(yaw)*PSPD*.7;dz-=Math.sin(yaw)*PSPD*.7;}
+  // Joystick (already in world-relative coords after transform)
+  if(jAct){
+    dx+=-(Math.sin(yaw)*jDy+Math.cos(yaw)*jDx)*PSPD;
+    dz+=-(Math.cos(yaw)*jDy-Math.sin(yaw)*jDx)*PSPD;
+  }
+  const mv=Math.abs(dx)>.0005||Math.abs(dz)>.0005;
+  const nx=pPos.x+dx,nz=pPos.z+dz;
+  if(!blocked(nx,nz)){
+    if(walkable(nx,pPos.z))pPos.x=nx;
+    if(walkable(pPos.x,nz))pPos.z=nz;
+  }
+  pChr.group.position.set(pPos.x,0,pPos.z);
+  // +PI so camera sees back of character
+  pChr.group.rotation.y=yaw+Math.PI;
+  // Walk animation
+  if(mv){
+    wkT++;
+    const a=Math.sin(wkT*.28)*.52;
+    pChr.lL.rotation.x=a;pChr.lR.rotation.x=-a;
+    pChr.aL.rotation.x=-a*.75;pChr.aR.rotation.x=a*.75;
+  } else {
+    pChr.lL.rotation.x*=.8;pChr.lR.rotation.x*=.8;
+    pChr.aL.rotation.x*=.8;pChr.aR.rotation.x*=.8;
+  }
+  collectCoins();
+  checkDoors();
+}
+
+// ——— CAMERA ———
+function toggleCamera(){
+  cam3rd=!cam3rd;
+  document.getElementById('hud-cam').textContent=cam3rd?'📷 3rd':'📷 1st';
+}
+const _cV=new THREE.Vector3(),_cL=new THREE.Vector3();
+function updateCam(){
+  if(cam3rd){
+    // Camera BEHIND player
+    _cV.set(pPos.x+Math.sin(yaw)*6.5, 5, pPos.z+Math.cos(yaw)*6.5);
+    camera.position.lerp(_cV,.14);
+    _cL.set(pPos.x,2.5,pPos.z);
+    camera.lookAt(_cL);
+    if(pChr)pChr.group.visible=true;
+  } else {
+    camera.position.set(pPos.x,3.3,pPos.z);
+    camera.rotation.set(0,yaw+Math.PI,0);
+    if(pChr)pChr.group.visible=false;
+  }
+  // Name tags always face camera
+  scene.traverse(o=>{if(o.isMesh&&o.renderOrder===10)o.lookAt(camera.position);});
+}
+
+// ——— COINS ———
+let tick=0;
+function collectCoins(){
+  for(const c of coins){
+    if(c.col)continue;
+    if(Math.hypot(pPos.x-c.x,pPos.z-c.z)<1.1){
+      c.col=true;scene.remove(c.g);
+      coinCount++;updateHUD();
+      if(coinCount>=COIN_TOTAL)setTimeout(showLv1Win,300);
+    }
+  }
+}
+function animCoins(){
+  tick+=.04;
+  for(const c of coins){
+    if(!c.col){c.g.position.y=.85+Math.sin(tick+c.ph)*.2;c.g.rotation.y+=.06;}
+  }
+}
+
+// ——— DOORS ———
+function checkDoors(){
+  nearDoor=null;let bd=3.8;
+  for(const[,dobj] of Object.entries(doorObjs)){
+    if(!dobj.locked||dobj.opening)continue;
+    const d=dobj.def;
+    const dx=pPos.x-(d.wallDir==='NS'?(d.xS+d.xE)/2:d.x);
+    const dz=pPos.z-(d.wallDir==='NS'?d.z:(d.zS+d.zE)/2);
+    const dist=Math.sqrt(dx*dx+dz*dz);
+    dobj.mat.opacity=dist<4?.62+.3*Math.sin(tick*6):.88;
+    if(dist<bd){bd=dist;nearDoor={dobj};}
+  }
+  const hint=document.getElementById('door-hint');
+  const btn=document.getElementById('btn-door');
+  if(nearDoor){
+    hint.style.display='block';
+    btn.classList.add('near');
+  } else {
+    hint.style.display='none';
+    btn.classList.remove('near');
+  }
+}
+
+function interactDoor(){
+  if(nearDoor&&gst==='PLAYING'){startQ(nearDoor.dobj);nearDoor=null;}
+}
+
+// ——— QUESTION SYSTEM ———
+let activeD=null,qBusy=false;
+function startQ(dobj){
+  if(qBusy)return;
+  qBusy=true;gst='Q';activeD=dobj;dobj.qi=0;
+  showQ(dobj);
+}
+function showQ(dobj){
+  const ov=document.getElementById('ov-q');ov.style.display='flex';
+  const q=dobj.qs[dobj.qi];
+  document.getElementById('q-lbl').textContent=`🔐 Pertanyaan ${dobj.qi+1} / 3`;
+  document.getElementById('q-subj').textContent=q.s;
+  document.getElementById('q-txt').textContent=q.q;
+  // progress
+  const pg=document.getElementById('q-prog');pg.innerHTML='';
+  for(let i=0;i<3;i++){
+    const d=document.createElement('div');
+    d.className='q-dot'+(i<dobj.qi?' done':i===dobj.qi?' act':'');
+    d.textContent=i<dobj.qi?'✓':i+1;pg.appendChild(d);
+  }
+  // options
+  const op=document.getElementById('q-opts');op.innerHTML='';
+  q.o.forEach((o,i)=>{
+    const b=document.createElement('button');b.className='q-btn';b.textContent=o;
+    b.ontouchend=b.onclick=()=>{
+      op.querySelectorAll('.q-btn').forEach(x=>{x.onclick=null;x.ontouchend=null;});
+      const ok=i===q.a;
+      b.classList.add(ok?'ok':'no');
+      if(!ok)op.querySelectorAll('.q-btn')[q.a].classList.add('ok');
+      document.getElementById('q-fb').textContent=ok?'✅ Benar! Hebat!':'❌ Kurang tepat, semangat!';
+      document.getElementById('q-fb').style.color=ok?'#4CAF50':'#F44336';
+      dobj.qi++;
+      setTimeout(()=>{
+        if(dobj.qi>=3){
+          document.getElementById('ov-q').style.display='none';
+          qBusy=false;gst='PLAYING';openDoor(dobj);
+        } else showQ(dobj);
+      },950);
+    };
+    op.appendChild(b);
+  });
+  document.getElementById('q-fb').textContent='';
+}
+function openDoor(dobj){
+  dobj.locked=false;dobj.opening=true;
+}
+
+// ——— NPC UPDATE ———
+function updateNPCs(){
+  for(const npc of NPCList){
+    if(npc.wait>0){npc.wait--;continue;}
+    const p=npc.obj.position;
+    const tx=npc.tgt.x-p.x,tz=npc.tgt.z-p.z;
+    const dist=Math.sqrt(tx*tx+tz*tz);
+    if(dist<.5){
+      const rm=ROOMS.find(r=>r.id===npc.room);
+      if(rm)npc.tgt.set(rm.x0+2+Math.random()*(rm.x1-rm.x0-4),0,rm.z0+2+Math.random()*(rm.z1-rm.z0-4));
+      npc.wait=rnd(60,180);continue;
+    }
+    const nx=p.x+tx/dist*NSPD,nz=p.z+tz/dist*NSPD;
+    if(walkable(nx,nz)){p.x=nx;p.z=nz;}
+    npc.obj.rotation.y=Math.atan2(tx,tz);
+    npc.chr.wt++;
+    const a=Math.sin(npc.chr.wt*.22)*.45;
+    npc.chr.lL.rotation.x=a;npc.chr.lR.rotation.x=-a;
+    npc.chr.aL.rotation.x=-a*.75;npc.chr.aR.rotation.x=a*.75;
+  }
+}
+
+// ——— NPC DIALOG ———
+const IBU_MSG=[
+  'Aduh! Kamu bikin Ibu jatuh! Lihat-lihat dong kalau jalan! 😤',
+  'Ih! Berlari di dalam rumah itu bahaya tau! Ibu kesal banget! 😠',
+  'Hei! Jangan ganggu Ibu yang lagi masak! Berisik sekali! 😡',
+  'Kamu lagi ngapain sih? Bikin Ibu pusing kepala nih! 😤',
+  'Astaga! Berapa kali Ibu bilang, hati-hati kalau jalan! 😠',
+  'Ibu lagi capek dan kamu masih bikin ribut! Hmmph! 😡',
+];
+const AKANG_MSG=[
+  'Hei! Akang lihat kamu semangat banget! Ayo terus, jangan menyerah! 💪',
+  'Wah wah! Ada jagoan cilik lewat! Pasti bisa kumpulkan semua koin! 🌟',
+  'Akang percaya sama kamu! Terus berjuang, hasilnya pasti worth it! 😎',
+  'Kamu keren banget tadi! Akang bangga lihat semangatmu! 🔥',
+  'Yuk! Jangan kasih kendor! Akang selalu ada buat support! 💯',
+  'Mantaaap! Kalau capek istirahat dulu, tapi jangan lama-lama ya! 😄',
+];
+
+function checkNPCInteract(){
+  if(gst!=='PLAYING'||npcCD>0)return;
+  for(const npc of NPCList){
+    if(!npc.cfg)continue;
+    const dx=pPos.x-npc.obj.position.x,dz=pPos.z-npc.obj.position.z;
+    if(Math.sqrt(dx*dx+dz*dz)<2.4){showNPCDlg(npc.cfg);return;}
+  }
+}
+
+function closeDlg(){
+  document.getElementById('npc-dlg').style.display='none';
+  gst='PLAYING';
+}
+
+function addCoins(n){
+  coinCount=Math.min(coinCount+n,COIN_TOTAL);
+  updateHUD();
+  // popup feedback
+  const h=document.getElementById('door-hint');
+  const prev=h.textContent;
+  h.textContent=`+${n} 🪙 Koin didapat!`;
+  h.style.display='block';
+  h.style.background='rgba(255,215,0,.92)';
+  h.style.color='#000';
+  setTimeout(()=>{
+    h.style.display='none';
+    h.style.background='rgba(255,193,7,.92)';
+    h.textContent='🔐 Tekan tombol 🚪 untuk buka pintu!';
+  },2000);
+  if(coinCount>=COIN_TOTAL)setTimeout(showLv1Win,300);
+}
+
+function showNPCDlg(cfg){
+  npcCD=360;gst='NPC';
+  const dlg=document.getElementById('npc-dlg');
+  dlg.style.display='block';
+  const nn=document.getElementById('npc-name');
+  const nt=document.getElementById('npc-text');
+  const nb=document.getElementById('npc-btns');
+  nn.textContent=cfg.name;
+  nb.innerHTML='';
+
+  if(cfg.id==='ibu'){
+    nn.style.color='#C62828';
+    nt.textContent=IBU_MSG[rnd(0,IBU_MSG.length-1)];
+    [
+      {lbl:'😭 Nangis',   col:'#1565C0', after:'Aduh, jangan nangis dong. Ibu kasihan juga sih... Lain kali hati-hati ya.',      rew:0},
+      {lbl:'🙏 Minta Maaf',col:'#2E7D32',after:'Iya sudah Ibu maafkan. Senang kamu mau minta maaf! Ini koin buat kamu ya. 🪙',   rew:3},
+      {lbl:'🏃 Lari!',    col:'#7B1FA2', after:'Hei berhenti! Dasar anak nakal! Awas kalau ketangkap! 😤',                        rew:0},
+    ].forEach(o=>{
+      const b=document.createElement('button');b.className='npc-btn';b.textContent=o.lbl;
+      b.style.background=o.col;b.style.color='#fff';
+      b.ontouchend=b.onclick=(e)=>{
+        e.preventDefault();
+        nb.innerHTML='';nt.textContent=o.after;
+        if(o.rew>0){setTimeout(()=>{addCoins(o.rew);closeDlg();},1300);}
+        else{
+          if(o.lbl.includes('Lari')){pPos.x+=rnd(-4,4);pPos.z+=rnd(-4,4);}
+          setTimeout(closeDlg,1400);
+        }
+      };
+      nb.appendChild(b);
+    });
+
+  } else if(cfg.id==='akang'){
+    nn.style.color='#37474F';
+    nt.textContent=AKANG_MSG[rnd(0,AKANG_MSG.length-1)]+' Oh ya, boleh minta peluk sebentar? Akang kangen! 🤗';
+    [
+      {lbl:'🤗 Peluk Akang!',col:'#E65100',after:'Makasih pelukan manisnya! Akang bahagia banget! Ini koin spesial! 🪙🪙',rew:5},
+      {lbl:'❌ Tidak dulu', col:'#546E7A',after:'Oke gapapa. Tetap semangat ya! Akang masih di sini. 👍',              rew:0},
+    ].forEach(o=>{
+      const b=document.createElement('button');b.className='npc-btn';b.textContent=o.lbl;
+      b.style.background=o.col;b.style.color='#fff';
+      b.ontouchend=b.onclick=(e)=>{
+        e.preventDefault();
+        nb.innerHTML='';nt.textContent=o.after;
+        if(o.rew>0){setTimeout(()=>{addCoins(o.rew);closeDlg();},1300);}
+        else{setTimeout(closeDlg,1400);}
+      };
+      nb.appendChild(b);
+    });
+
+  } else if(cfg.id==='binar'){
+    nn.style.color='#6A1B9A';
+    nt.textContent=[
+      'INI KAMAR KAKAK! Keluar sekarang! Kak Binar lagi ngerjain PR! 😤',
+      'Hei hei hei! Siapa suruh masuk kamar Kakak?! KELUAR! 😠',
+      'USIR! USIR! Kamar ini privat! Pergi sana! 🚫',
+    ][rnd(0,2)];
+    const b=document.createElement('button');b.className='npc-btn';b.textContent='😅 Oke Kak, pergi!';
+    b.style.background='#6A1B9A';b.style.color='#fff';
+    b.ontouchend=b.onclick=(e)=>{e.preventDefault();pPos.set(4,0,2);closeDlg();};
+    nb.appendChild(b);
+
+  } else {
+    nn.style.color='#4CAF50';
+    nt.textContent='Halo! Selamat bermain! 😊';
+    const b=document.createElement('button');b.className='npc-btn';b.textContent='Halo! 👋';
+    b.style.background='#4CAF50';b.style.color='#fff';
+    b.ontouchend=b.onclick=(e)=>{e.preventDefault();closeDlg();};
+    nb.appendChild(b);
+  }
+}
+
+// ——— HUD ———
+function updateHUD(){
+  document.getElementById('hud-lv').textContent='Level '+lvl;
+  document.getElementById('hud-coins').textContent='🪙 '+coinCount+'/'+COIN_TOTAL;
+  const rm=ROOMS.find(r=>pPos.x>r.x0&&pPos.x<r.x1&&pPos.z>r.z0&&pPos.z<r.z1);
+  document.getElementById('hud-room').textContent=rm?rm.name:'🏠';
+  document.getElementById('hud-cam').textContent=cam3rd?'📷':'👁️';
+}
+
+// ——— LEVEL FLOWS ———
+function showLv1Win(){
+  gst='LV1WIN';
+  document.getElementById('ov-lv1win').style.display='flex';
+  const gr=document.getElementById('jersey-grid');gr.innerHTML='';
+  JERSEYS.forEach(j=>{
+    const d=document.createElement('div');d.className='rw-item';
+    d.innerHTML=`<div class="ri" style="color:${j.c}">${j.e}</div><div class="rn">${j.n}</div>`;
+    d.ontouchend=d.onclick=()=>{
+      chJersey=j.n;
+      gr.querySelectorAll('.rw-item').forEach(x=>x.style.borderColor='');
+      d.style.borderColor='#FFD700';
+      document.getElementById('lv1-next').style.display='block';
+    };
+    gr.appendChild(d);
+  });
+}
+function startLv2(){
+  document.getElementById('ov-lv1win').style.display='none';
+  lvl=2;lv2qi=0;lv2sc=0;gst='LV2';showLv2();
+}
+function showLv2(){
+  document.getElementById('ov-lv2').style.display='flex';
+  lv2ti=rnd(0,3);
+  document.getElementById('lv2-tgt').textContent=LEGO[lv2ti].e;
+  document.getElementById('lv2-q').textContent=`Soal ${lv2qi+1}/3 — Pilih lego: ${LEGO[lv2ti].n}`;
+  const op=document.getElementById('lv2-opts');op.innerHTML='';
+  [...LEGO].sort(()=>Math.random()-.5).forEach(opt=>{
+    const d=document.createElement('div');d.className='rw-item';
+    d.innerHTML=`<div class="ri">${opt.e}</div><div class="rn">${opt.n}</div>`;
+    d.ontouchend=d.onclick=()=>{
+      op.querySelectorAll('.rw-item').forEach(x=>{x.onclick=null;x.ontouchend=null;});
+      const ok=opt.n===LEGO[lv2ti].n;
+      if(ok){lv2sc++;d.style.borderColor='#4CAF50';d.style.background='rgba(76,175,80,.3)';}
+      else{d.style.borderColor='#F44336';d.style.background='rgba(244,67,54,.25)';}
+      if(ok)chLego=opt.n;
+      document.getElementById('lv2-sc').textContent=`Skor: ${lv2sc}/${lv2qi+1}`;
+      setTimeout(()=>{lv2qi++;if(lv2qi>=3){document.getElementById('ov-lv2').style.display='none';startLv3();}else showLv2();},900);
+    };
+    op.appendChild(d);
+  });
+}
+function startLv3(){
+  lvl=3;lv3qs=genMath();lv3qi=0;lv3sc=0;gst='LV3';showLv3();
+}
+function showLv3(){
+  document.getElementById('ov-lv3').style.display='flex';
+  const q=lv3qs[lv3qi];
+  const pg=document.getElementById('lv3-prog');pg.innerHTML='';
+  for(let i=0;i<5;i++){
+    const d=document.createElement('div');
+    d.className='q-dot'+(i<lv3qi?' done':i===lv3qi?' act':'');
+    d.textContent=i<lv3qi?'✓':i+1;pg.appendChild(d);
+  }
+  document.getElementById('lv3-q').textContent=q.text;
+  const op=document.getElementById('lv3-opts');op.innerHTML='';
+  q.opts.forEach(o=>{
+    const b=document.createElement('button');b.className='q-btn';b.textContent=o;
+    b.ontouchend=b.onclick=()=>{
+      op.querySelectorAll('.q-btn').forEach(x=>{x.onclick=null;x.ontouchend=null;});
+      const ok=(o===q.ans);
+      if(ok){lv3sc++;b.classList.add('ok');}
+      else{
+        b.classList.add('no');
+        op.querySelectorAll('.q-btn').forEach(x=>{
+          if(String(x.textContent)===String(q.ans))x.classList.add('ok');
+        });
+      }
+      document.getElementById('lv3-sc').textContent=`Benar: ${lv3sc}/${lv3qi+1}`;
+      lv3qi++;
+      setTimeout(()=>{
+        if(lv3qi>=5){document.getElementById('ov-lv3').style.display='none';showWin();}
+        else showLv3();
+      },900);
+    };
+    op.appendChild(b);
+  });
+}
+function showWin(){
+  gst='WIN';
+  document.getElementById('ov-win').style.display='flex';
+  document.getElementById('win-name').textContent=(selId==='suar'?'Suar':'Pijar')+' telah menyelesaikan semua level! 🌟';
+  document.getElementById('win-rewards').innerHTML=`⚽ Jersey: ${chJersey||'?'}<br>🧩 Lego: ${chLego||'?'}<br>📐 Matematika: ${lv3sc}/5 ✓`;
+}
+
+// ——— KEYBOARD ———
+window.addEventListener('keydown',e=>{
+  keys[e.key]=true;
+  if(e.key==='c'||e.key==='C')toggleCamera();
+  if((e.key==='e'||e.key==='E')&&gst==='PLAYING')interactDoor();
+  if(e.key==='Escape'&&gst==='NPC'){document.getElementById('npc-dlg').style.display='none';gst='PLAYING';}
+},{passive:true});
+window.addEventListener('keyup',e=>keys[e.key]=false,{passive:true});
+
+// Mouse rotation (desktop)
+let mDrag=false,mLX=0;
+renderer.domElement.addEventListener('mousedown',e=>{if(gst==='PLAYING'){mDrag=true;mLX=e.clientX;}});
+window.addEventListener('mouseup',()=>mDrag=false);
+window.addEventListener('mousemove',e=>{if(mDrag&&gst==='PLAYING'){yaw-=(e.clientX-mLX)*.005;mLX=e.clientX;}});
+
+// ============================================================
+//  TOUCH CONTROLS — iOS-optimized, no coordinate bugs
+// ============================================================
+let jAct=false,jTid=null,jBX=0,jBY=0,jDx=0,jDy=0;
+const JR=52; // joystick max radius px
+let cTid=null,cLX=0;
+
+const jZone=document.getElementById('joy-zone');
+const jKnob=document.getElementById('joy-knob');
+const camZone=document.getElementById('cam-zone');
+
+// Get joystick center in PAGE coords (accounts for layout)
+function getJoyCenter(){
+  const r=jZone.getBoundingClientRect();
+  return {x:r.left+r.width/2, y:r.top+r.height/2};
+}
+
+function onTStart(e){
+  e.preventDefault();
+  for(let i=0;i<e.changedTouches.length;i++){
+    const t=e.changedTouches[i];
+    const jc=getJoyCenter();
+    // Is this touch near the joystick zone? (left half of screen OR near joy)
+    const nearJoy=t.clientX<vw()*0.45||
+      Math.hypot(t.clientX-jc.x,t.clientY-jc.y)<90;
+    if(nearJoy&&!jAct){
+      jAct=true;jTid=t.identifier;
+      jBX=t.clientX;jBY=t.clientY;
+      jDx=0;jDy=0;
+    } else if(!nearJoy&&cTid===null&&gst==='PLAYING'){
+      cTid=t.identifier;cLX=t.clientX;
+    }
+  }
+}
+function onTMove(e){
+  e.preventDefault();
+  for(let i=0;i<e.changedTouches.length;i++){
+    const t=e.changedTouches[i];
+    if(t.identifier===jTid){
+      const dx=t.clientX-jBX, dy=t.clientY-jBY;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const r=dist>1?Math.min(dist,JR)/JR:0;
+      jDx=dist>1?(dx/dist)*r:0;
+      jDy=dist>1?(dy/dist)*r:0;
+      // Move knob visually within the fixed joystick base
+      const kx=jDx*JR, ky=jDy*JR;
+      jKnob.style.transform=`translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
+    }
+    if(t.identifier===cTid&&gst==='PLAYING'){
+      yaw-=(t.clientX-cLX)*.008;
+      cLX=t.clientX;
+    }
+  }
+}
+function onTEnd(e){
+  for(let i=0;i<e.changedTouches.length;i++){
+    const t=e.changedTouches[i];
+    if(t.identifier===jTid){
+      jAct=false;jTid=null;jDx=0;jDy=0;
+      jKnob.style.transform='translate(-50%,-50%)';
+    }
+    if(t.identifier===cTid){cTid=null;}
+  }
+}
+
+// Attach to document for maximum iOS capture
+document.addEventListener('touchstart', onTStart,{passive:false,capture:true});
+document.addEventListener('touchmove',  onTMove, {passive:false,capture:true});
+document.addEventListener('touchend',   onTEnd,  {passive:false,capture:true});
+document.addEventListener('touchcancel',onTEnd,  {passive:false,capture:true});
+
+// Prevent all default browser gestures
+document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});
+window.addEventListener('contextmenu',e=>e.preventDefault());
+
+// ——— DOOR OPENING ANIMATION ———
+function animDoors(){
+  for(const dobj of Object.values(doorObjs)){
+    if(dobj.opening){
+      if(dobj.mesh.parent&&dobj.mesh.position.y<WALL_H+2.5){
+        dobj.mesh.position.y+=.14;
+        if(dobj.lbl.parent)dobj.lbl.position.y+=.14;
+      } else if(dobj.mesh.parent){
+        scene.remove(dobj.mesh);
+        if(dobj.lbl.parent)scene.remove(dobj.lbl);
+      }
+    }
+  }
+}
+
+// ——— COOLDOWNS ———
+function tickCD(){if(npcCD>0)npcCD--;}
+
+// ——— MAIN LOOP ———
+function loop(){
+  requestAnimationFrame(loop);
+  if(gst==='PLAYING'){
+    updatePlayer();
+    updateNPCs();
+    checkNPCInteract();
+    animCoins();
+    animDoors();
+    updateCam();
+    tickCD();
+  } else {
+    animCoins();
+    animDoors();
+    updateCam();
+  }
+  renderer.render(scene,camera);
+}
+
+loop();
+</script>
+</body>
+</html>
