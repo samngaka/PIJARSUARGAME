@@ -62,13 +62,24 @@ canvas{display:block;width:100%!important;height:100%!important;}
 .pill{background:rgba(0,0,0,.65);color:#fff;padding:5px 13px;border-radius:20px;
   font-size:clamp(11px,2.5vw,13px);font-weight:700;backdrop-filter:blur(4px);}
 #miniMap{position:fixed;top:calc(10px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));width:clamp(150px,24vw,230px);background:rgba(0,0,0,.7);
-  border:2px solid rgba(255,255,255,.24);border-radius:12px;padding:8px;z-index:85;pointer-events:none;
+  border:2px solid rgba(255,255,255,.24);border-radius:12px;padding:8px;z-index:85;pointer-events:auto;cursor:pointer;
   color:#fff;backdrop-filter:blur(4px);}
 #miniMap .mt{font-size:11px;font-weight:800;margin-bottom:5px;color:#FFD700;}
 #miniMap .mb{position:relative;height:clamp(86px,14vw,122px);background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden;}
 .mr{position:absolute;border:1px solid rgba(255,255,255,.36);font-size:8px;line-height:1.1;padding:2px;color:#fff;overflow:hidden;}
 .mdot{position:absolute;width:8px;height:8px;border-radius:50%;background:#29B6F6;border:2px solid #fff;transform:translate(-50%,-50%);}
 .mc{position:absolute;right:2px;bottom:1px;background:rgba(255,215,0,.9);color:#111;border-radius:8px;padding:1px 4px;font-size:8px;font-weight:800;}
+#bigMapOverlay{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:260;display:none;align-items:center;justify-content:center;padding:18px;}
+#bigMapCard{width:min(900px,96vw);height:min(680px,88dvh);background:linear-gradient(160deg,#102018,#050907);border:3px solid #FFD54F;
+  border-radius:18px;padding:14px;box-shadow:0 0 44px rgba(255,213,79,.25);display:flex;flex-direction:column;gap:10px;}
+#bigMapHead{display:flex;align-items:center;justify-content:space-between;color:#fff;gap:12px;}
+#bigMapHead h2{font-size:clamp(16px,3.5vw,24px);color:#FFD54F;margin:0;}
+#closeBigMap{border:none;border-radius:18px;background:#E53935;color:#fff;padding:8px 16px;font-weight:800;cursor:pointer;}
+#bigMapCanvas{position:relative;flex:1;min-height:0;background:rgba(255,255,255,.08);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.18);}
+.br{position:absolute;border:2px solid rgba(255,255,255,.42);color:#fff;font-size:clamp(10px,2vw,14px);font-weight:800;padding:5px;overflow:hidden;}
+.bc{position:absolute;width:10px;height:10px;border-radius:50%;background:#FFD54F;border:2px solid #5D4037;box-shadow:0 0 10px rgba(255,213,79,.9);transform:translate(-50%,-50%);}
+.bp{position:absolute;width:14px;height:14px;border-radius:50%;background:#29B6F6;border:3px solid #fff;box-shadow:0 0 12px #29B6F6;transform:translate(-50%,-50%);}
+.blabel{position:absolute;right:5px;bottom:4px;background:rgba(0,0,0,.62);border-radius:10px;padding:2px 7px;color:#FFD54F;font-size:11px;}
 
 /* ——— PS CUTSCENE ——— */
 #psHud{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translateX(-50%);z-index:120;display:none;
@@ -176,7 +187,17 @@ canvas{display:block;width:100%!important;height:100%!important;}
   <span class="pill" id="hud-coins">🪙 0/45</span>
   <span class="pill" id="hud-room">🏠</span>
   <span class="pill" id="hud-cam">📷 3rd</span>
-  <div id="miniMap"></div>
+  <button id="miniMap" type="button" aria-label="Buka peta besar"></button>
+</div>
+
+<div id="bigMapOverlay">
+  <div id="bigMapCard">
+    <div id="bigMapHead">
+      <h2>Peta Rumah dan Posisi Koin</h2>
+      <button id="closeBigMap" type="button">Tutup</button>
+    </div>
+    <div id="bigMapCanvas"></div>
+  </div>
 </div>
 
 <!-- Door proximity hint -->
@@ -942,8 +963,8 @@ function updatePlayer(){
   if(keys['d']||keys['D']){dx+=Math.cos(yaw)*spd*.7;dz-=Math.sin(yaw)*spd*.7;}
   // Joystick
   if(jActive){
-    dx-=(Math.sin(yaw)*jDy+Math.cos(yaw)*jDx)*spd;
-    dz-=(Math.cos(yaw)*jDy-Math.sin(yaw)*jDx)*spd;
+    dx+=(Math.sin(yaw)*jDy-Math.cos(yaw)*jDx)*spd;
+    dz+=(Math.cos(yaw)*jDy+Math.sin(yaw)*jDx)*spd;
   }
   const moving=Math.abs(dx)>.0005||Math.abs(dz)>.0005;
   const nx=playerPos.x+dx,nz=playerPos.z+dz;
@@ -1397,10 +1418,7 @@ function renderMiniMap(activeRoom){
   const el=document.getElementById('miniMap');
   if(!el)return;
   const counts=coinCountsByRoom();
-  const minX=Math.min(...ROOMS.map(r=>r.x0)),maxX=Math.max(...ROOMS.map(r=>r.x1));
-  const minZ=Math.min(...ROOMS.map(r=>r.z0)),maxZ=Math.max(...ROOMS.map(r=>r.z1));
-  const sx=x=>((x-minX)/(maxX-minX))*100;
-  const sz=z=>((z-minZ)/(maxZ-minZ))*100;
+  const {sx,sz}=mapScale();
   const roomsHtml=ROOMS.map(r=>{
     const active=activeRoom&&activeRoom.id===r.id;
     return `<div class="mr" style="left:${sx(r.x0)}%;top:${sz(r.z0)}%;width:${sx(r.x1)-sx(r.x0)}%;height:${sz(r.z1)-sz(r.z0)}%;background:${active?'rgba(41,182,246,.35)':'rgba(255,255,255,.08)'};">
@@ -1409,6 +1427,45 @@ function renderMiniMap(activeRoom){
   }).join('');
   el.innerHTML=`<div class="mt">MAP RUMAH · SISA KOIN</div><div class="mb">${roomsHtml}<span class="mdot" style="left:${sx(playerPos.x)}%;top:${sz(playerPos.z)}%;"></span></div>`;
 }
+function mapScale(){
+  const minX=Math.min(...ROOMS.map(r=>r.x0)),maxX=Math.max(...ROOMS.map(r=>r.x1));
+  const minZ=Math.min(...ROOMS.map(r=>r.z0)),maxZ=Math.max(...ROOMS.map(r=>r.z1));
+  return {
+    sx:x=>((x-minX)/(maxX-minX))*100,
+    sz:z=>((z-minZ)/(maxZ-minZ))*100
+  };
+}
+function renderBigMap(){
+  const canvas=document.getElementById('bigMapCanvas');
+  const counts=coinCountsByRoom();
+  const {sx,sz}=mapScale();
+  const roomsHtml=ROOMS.map(r=>{
+    const active=getRoomAt(playerPos.x,playerPos.z)?.id===r.id;
+    return `<div class="br" style="left:${sx(r.x0)}%;top:${sz(r.z0)}%;width:${sx(r.x1)-sx(r.x0)}%;height:${sz(r.z1)-sz(r.z0)}%;background:${active?'rgba(41,182,246,.28)':'rgba(255,255,255,.07)'};">
+      ${r.name}<span class="blabel">${counts[r.id]||0} koin</span>
+    </div>`;
+  }).join('');
+  const coinsHtml=coinData
+    .filter(c=>!c.collected&&!c.collecting)
+    .map(c=>`<span class="bc" style="left:${sx(c.x)}%;top:${sz(c.z)}%;"></span>`)
+    .join('');
+  canvas.innerHTML=`${roomsHtml}${coinsHtml}<span class="bp" style="left:${sx(playerPos.x)}%;top:${sz(playerPos.z)}%;"></span>`;
+}
+function openBigMap(){
+  renderBigMap();
+  document.getElementById('bigMapOverlay').style.display='flex';
+}
+function closeBigMap(){
+  document.getElementById('bigMapOverlay').style.display='none';
+  if(gState==='PLAYING')elsFocusMap();
+}
+function elsFocusMap(){
+  renderer.domElement.focus?.();
+}
+document.getElementById('miniMap').addEventListener('click',openBigMap);
+document.getElementById('miniMap').addEventListener('pointerup',event=>{event.preventDefault();openBigMap();});
+document.getElementById('closeBigMap').addEventListener('click',closeBigMap);
+document.getElementById('bigMapOverlay').addEventListener('click',event=>{if(event.target.id==='bigMapOverlay')closeBigMap();});
 
 // ——— LV1 WIN ———
 function showLv1Win(){
