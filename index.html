@@ -675,7 +675,7 @@ function makeChar(cfg){
   const g=new THREE.Group();
   const {skin,hair,shirt,pants,jerseyNum,name,glasses,bald,hairColor}=cfg;
   const fTex=faceTex(true,glasses);
-  const faceMat=[lmat(skin),lmat(skin),lmat(skin),lmat(skin),new THREE.MeshLambertMaterial({map:fTex}),lmat(skin)];
+  const faceMat=[lmat(skin),lmat(skin),lmat(skin),lmat(skin),lmat(skin),new THREE.MeshLambertMaterial({map:fTex})];
   const bodyScale=cfg.bodyScale||1;
   const torsoW=1.1*bodyScale;
 
@@ -715,7 +715,7 @@ function makeChar(cfg){
   // Jersey number
   if(jerseyNum){
     const nm=new THREE.Mesh(new THREE.PlaneGeometry(.42,.42),new THREE.MeshLambertMaterial({map:numTex(jerseyNum),transparent:true}));
-    nm.position.set(0,1.8,.34);g.add(nm);
+    nm.position.set(0,1.8,-.34);nm.rotation.y=Math.PI;g.add(nm);
   }
 
   // Arms (as single groups for animation)
@@ -972,8 +972,9 @@ function updatePlayer(){
   if(keys['d']||keys['D']){dx+=Math.cos(yaw)*spd*.7;dz-=Math.sin(yaw)*spd*.7;}
   // Joystick
   if(jActive){
-    dx+=(Math.sin(yaw)*jDy+Math.cos(yaw)*jDx)*spd;
-    dz+=(Math.cos(yaw)*jDy-Math.sin(yaw)*jDx)*spd;
+    const jy=camMode==='first'?-jDy:jDy;
+    dx+=(Math.sin(yaw)*jy+Math.cos(yaw)*jDx)*spd;
+    dz+=(Math.cos(yaw)*jy-Math.sin(yaw)*jDx)*spd;
   }
   const moving=Math.abs(dx)>.0005||Math.abs(dz)>.0005;
   const nx=playerPos.x+dx,nz=playerPos.z+dz;
