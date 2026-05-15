@@ -460,6 +460,15 @@ function genMathQs() {
   return qs;
 }
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+function bindTap(el,handler){
+  const run=event=>{
+    event.preventDefault();
+    event.stopPropagation();
+    handler(event);
+  };
+  el.addEventListener('click',run);
+  el.addEventListener('pointerup',run);
+}
 
 // ——— MATERIAL CACHE ———
 const _mc={};
@@ -1224,12 +1233,12 @@ function showNPCDialog(cfg){
     yes.textContent='Iya, main PS FC26 🎮';
     yes.style.background='#1565C0';
     yes.style.color='#fff';
-    yes.onclick=()=>{dlg.style.display='none';startPSCutscene();};
+  bindTap(yes,()=>{dlg.style.display='none';startPSCutscene();});
     const no=document.createElement('button');
     no.textContent='Nanti dulu';
     no.style.background='#607D8B';
     no.style.color='#fff';
-    no.onclick=()=>{dlg.style.display='none';gState='PLAYING';};
+    bindTap(no,()=>{dlg.style.display='none';gState='PLAYING';});
     nb.appendChild(yes);nb.appendChild(no);
     return;
   }
@@ -1237,10 +1246,11 @@ function showNPCDialog(cfg){
   btn.textContent=cfg.id==='ibu'?'Iya Bu! 🙏':cfg.id==='binar'?'Oke Kak! 😅':cfg.id==='playmate'?(psPlayed?'Lanjut cari koin 🪙':'Main PS! 🎮'):'Peluk Ayah 🤗';
   btn.style.background=cfg.id==='akang'?'#607D8B':cfg.id==='ibu'?'#E91E63':cfg.id==='playmate'?'#1565C0':'#9C27B0';
   btn.style.color='#fff';
-  btn.onclick=()=>{
+  bindTap(btn,()=>{
     dlg.style.display='none';gState='PLAYING';
+    npcCooldown=300;
     if(cfg.id==='binar'){playerPos.set(4,0,2);}
-  };
+  });
   nb.appendChild(btn);
 }
 
@@ -1575,6 +1585,7 @@ const jthumb=document.getElementById('jthumb');
 
 function handleTStart(e){
   if(gState==='SELECT')return;
+  if(e.target.closest('button,#npcDlg,#psDialog,#bigMapOverlay,#miniMap,.ov'))return;
   e.preventDefault();
   for(const t of e.changedTouches){
     const inLeft=t.clientX<gameWidth()*.52;
